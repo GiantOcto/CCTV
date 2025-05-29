@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:CCTV"
         mc:Ignorable="d"
-        Title="CCTV 제어 시스템" Height="700" Width="1200"
+        Title="CCTV 제어 시스템" Height="1080" Width="1920"
         WindowStartupLocation="CenterScreen"
         Loaded="Window_Loaded"
         Background="#FF2E3440">
@@ -68,68 +68,27 @@
 
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="200"/>
             <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="300"/>
+            <ColumnDefinition Width="350"/>
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
         
-        <!-- 좌측 제어 패널 -->
-        <Border Grid.Column="0" Grid.Row="0" Background="#FF3B4252" BorderBrush="#FF4C566A" BorderThickness="0,0,1,0">
-            <StackPanel Margin="10">
-                
-                <!-- CCTV 연결 -->
-                <GroupBox Header="CCTV 연결" Foreground="White" BorderBrush="#FF5E81AC" Margin="0,0,0,20">
-                    <Button Content="CCTV 연결" Style="{StaticResource ButtonStyle}"
-                            Click="CCTVButton_Click" Height="40"/>
-                </GroupBox>
-
-                <!-- 채널 선택 -->
-                <GroupBox Header="채널 선택" Foreground="White" BorderBrush="#FF5E81AC" Margin="0,0,0,20">
-                    <StackPanel>
-                        <TextBlock Text="현재 채널: 선택 안됨" x:Name="CurrentChannelText" 
-                                  Foreground="White" HorizontalAlignment="Center" Margin="0,0,0,10"/>
-                        <UniformGrid Columns="2" Rows="2">
-                            <ToggleButton Name="Channel33Button" Content="33" Style="{StaticResource ChannelButtonStyle}" 
-                                         Click="ChannelButton_Click" Tag="33"/>
-                            <ToggleButton Name="Channel34Button" Content="34" Style="{StaticResource ChannelButtonStyle}" 
-                                         Click="ChannelButton_Click" Tag="34"/>
-                            <ToggleButton Name="Channel35Button" Content="35" Style="{StaticResource ChannelButtonStyle}" 
-                                         Click="ChannelButton_Click" Tag="35"/>
-                            <ToggleButton Name="Channel36Button" Content="36" Style="{StaticResource ChannelButtonStyle}" 
-                                         Click="ChannelButton_Click" Tag="36"/>
-                        </UniformGrid>
-                    </StackPanel>
-                </GroupBox>
-
-                <!-- 프리셋 -->
-                <GroupBox Header="프리셋" Foreground="White" BorderBrush="#FF5E81AC">
-                    <UniformGrid Columns="2">
-                        <Button Content="프리셋 1" Style="{StaticResource ButtonStyle}"
-                                Click="Preset1_Click"/>
-                        <Button Content="프리셋 2" Style="{StaticResource ButtonStyle}"
-                                Click="Preset2_Click"/>
-                    </UniformGrid>
-                </GroupBox>
-            </StackPanel>
-        </Border>
-        
-        <!-- 중앙 비디오 영역 (CCTV Window가 여기에 표시됨) -->
-        <Border Grid.Column="1" Grid.Row="0" Background="#FF3B4252" Margin="10">
-            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+        <!-- 중앙 비디오 영역 (확장됨) -->
+        <Border Grid.Column="0" Grid.Row="0" Background="#FF3B4252" Margin="10">
+            <StackPanel VerticalAlignment="Top" HorizontalAlignment="Left" Margin="20">
                 <TextBlock Text="CCTV 영상" FontSize="24" FontWeight="Bold" 
-                          Foreground="White" HorizontalAlignment="Center" Margin="0,0,0,20"/>
+                          Foreground="White" HorizontalAlignment="Left" Margin="0,0,0,20"/>
                 
                 <TextBlock Text="채널을 선택하면 여기에 실시간 영상이 표시됩니다" FontSize="16" 
-                          Foreground="#FFECEFF4" HorizontalAlignment="Center" Margin="0,0,0,20"/>
+                          Foreground="#FFECEFF4" HorizontalAlignment="Left" Margin="0,0,0,20"/>
                 
-                <Border Background="#FF434C5E" CornerRadius="10" Padding="20">
+                <Border Background="#FF434C5E" CornerRadius="10" Padding="20" HorizontalAlignment="Left">
                     <StackPanel>
                         <TextBlock Text="시스템 상태" FontSize="16" FontWeight="Bold" 
-                                  Foreground="White" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                                  Foreground="White" HorizontalAlignment="Left" Margin="0,0,0,10"/>
                         <Separator Background="#FF5E81AC" Margin="0,0,0,10"/>
                         <TextBlock Text="✓ SDK 초기화 완료" FontSize="12" 
                                   Foreground="#FFA3BE8C" Margin="0,2"/>
@@ -142,71 +101,100 @@
             </StackPanel>
         </Border>
         
-        <!-- 우측 PTZ 제어 영역 -->
-        <Border Grid.Column="2" Grid.Row="0" Background="#FF434C5E" BorderBrush="#FF4C566A" BorderThickness="1,0,0,0">
-            <Grid Margin="10">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
-                
-                <!-- 제목 -->
-                <TextBlock Grid.Row="0" Text="PTZ 제어" 
-                          FontSize="16" FontWeight="Bold" 
-                          Foreground="White" HorizontalAlignment="Center" 
-                          Margin="0,10,0,20"/>
-                
-                <!-- PTZ 제어 버튼들 -->
-                <Grid Grid.Row="1">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="60"/>  <!-- 틸트 UP -->
-                        <RowDefinition Height="60"/>  <!-- 팬 LEFT/RIGHT -->
-                        <RowDefinition Height="60"/>  <!-- 틸트 DOWN -->
-                        <RowDefinition Height="20"/>  <!-- 간격 -->
-                        <RowDefinition Height="50"/>  <!-- 줌 IN -->
-                        <RowDefinition Height="50"/>  <!-- 줌 OUT -->
-                    </Grid.RowDefinitions>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="100"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
+        <!-- 우측 제어 영역 (PTZ + 기존 좌측 제어 통합) -->
+        <Border Grid.Column="1" Grid.Row="0" Background="#FF434C5E" BorderBrush="#FF4C566A" BorderThickness="1,0,0,0">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel Margin="10">
                     
-                    <!-- 틸트 UP -->
-                    <Button Grid.Row="0" Grid.Column="1" Content="▲ UP" 
-                            Style="{StaticResource PTZButtonStyle}" 
-                            Click="TiltUp_Click"/>
+                    <!-- PTZ 제어 섹션 -->
+                    <GroupBox Header="PTZ 제어" Foreground="White" BorderBrush="#FF5E81AC" Margin="0,0,0,20">
+                        <Grid Margin="5">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="60"/>  <!-- 틸트 UP -->
+                                <RowDefinition Height="60"/>  <!-- 팬 LEFT/RIGHT -->
+                                <RowDefinition Height="60"/>  <!-- 틸트 DOWN -->
+                                <RowDefinition Height="20"/>  <!-- 간격 -->
+                                <RowDefinition Height="50"/>  <!-- 줌 IN -->
+                                <RowDefinition Height="50"/>  <!-- 줌 OUT -->
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="100"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <!-- 틸트 UP -->
+                            <Button Grid.Row="0" Grid.Column="1" Content="▲ UP" 
+                                    Style="{StaticResource PTZButtonStyle}" 
+                                    Click="TiltUp_Click"/>
+                            
+                            <!-- 팬 LEFT -->
+                            <Button Grid.Row="1" Grid.Column="0" Content="◀ LEFT" 
+                                    Style="{StaticResource PTZButtonStyle}" 
+                                    Click="PanLeft_Click"/>
+                            
+                            <!-- 팬 RIGHT -->
+                            <Button Grid.Row="1" Grid.Column="2" Content="RIGHT ▶" 
+                                    Style="{StaticResource PTZButtonStyle}" 
+                                    Click="PanRight_Click"/>
+                            
+                            <!-- 틸트 DOWN -->
+                            <Button Grid.Row="2" Grid.Column="1" Content="▼ DOWN" 
+                                    Style="{StaticResource PTZButtonStyle}" 
+                                    Click="TiltDown_Click"/>
+                            
+                            <!-- 줌 IN -->
+                            <Button Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="3" Content="🔍+ ZOOM IN" 
+                                    Style="{StaticResource PTZButtonStyle}" 
+                                    Click="ZoomIn_Click"/>
+                            
+                            <!-- 줌 OUT -->
+                            <Button Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="3" Content="🔍- ZOOM OUT" 
+                                    Style="{StaticResource PTZButtonStyle}" 
+                                    Click="ZoomOut_Click"/>
+                        </Grid>
+                    </GroupBox>
+
+                    <!-- CCTV 연결 섹션 -->
+                    <GroupBox Header="CCTV 연결" Foreground="White" BorderBrush="#FF5E81AC" Margin="0,0,0,20">
+                        <Button Content="CCTV 연결" Style="{StaticResource ButtonStyle}"
+                                Click="CCTVButton_Click" Height="40"/>
+                    </GroupBox>
+
+                    <!-- 채널 선택 섹션 -->
+                    <GroupBox Header="채널 선택" Foreground="White" BorderBrush="#FF5E81AC" Margin="0,0,0,20">
+                        <StackPanel>
+                            <TextBlock Text="현재 채널: 선택 안됨" x:Name="CurrentChannelText" 
+                                      Foreground="White" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                            <UniformGrid Columns="2" Rows="2">
+                                <ToggleButton Name="Channel33Button" Content="33" Style="{StaticResource ChannelButtonStyle}" 
+                                             Click="ChannelButton_Click" Tag="33"/>
+                                <ToggleButton Name="Channel34Button" Content="34" Style="{StaticResource ChannelButtonStyle}" 
+                                             Click="ChannelButton_Click" Tag="34"/>
+                                <ToggleButton Name="Channel35Button" Content="35" Style="{StaticResource ChannelButtonStyle}" 
+                                             Click="ChannelButton_Click" Tag="35"/>
+                                <ToggleButton Name="Channel36Button" Content="36" Style="{StaticResource ChannelButtonStyle}" 
+                                             Click="ChannelButton_Click" Tag="36"/>
+                            </UniformGrid>
+                        </StackPanel>
+                    </GroupBox>
+
+                    <!-- 프리셋 섹션 -->
+                    <GroupBox Header="프리셋" Foreground="White" BorderBrush="#FF5E81AC">
+                        <UniformGrid Columns="2">
+                            <Button Content="프리셋 1" Style="{StaticResource ButtonStyle}"
+                                    Click="Preset1_Click"/>
+                            <Button Content="프리셋 2" Style="{StaticResource ButtonStyle}"
+                                    Click="Preset2_Click"/>
+                        </UniformGrid>
+                    </GroupBox>
                     
-                    <!-- 팬 LEFT -->
-                    <Button Grid.Row="1" Grid.Column="0" Content="◀ LEFT" 
-                            Style="{StaticResource PTZButtonStyle}" 
-                            Click="PanLeft_Click"/>
-                    
-                    <!-- 팬 RIGHT -->
-                    <Button Grid.Row="1" Grid.Column="2" Content="RIGHT ▶" 
-                            Style="{StaticResource PTZButtonStyle}" 
-                            Click="PanRight_Click"/>
-                    
-                    <!-- 틸트 DOWN -->
-                    <Button Grid.Row="2" Grid.Column="1" Content="▼ DOWN" 
-                            Style="{StaticResource PTZButtonStyle}" 
-                            Click="TiltDown_Click"/>
-                    
-                    <!-- 줌 IN -->
-                    <Button Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="3" Content="🔍+ ZOOM IN" 
-                            Style="{StaticResource PTZButtonStyle}" 
-                            Click="ZoomIn_Click"/>
-                    
-                    <!-- 줌 OUT -->
-                    <Button Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="3" Content="🔍- ZOOM OUT" 
-                            Style="{StaticResource PTZButtonStyle}" 
-                            Click="ZoomOut_Click"/>
-                </Grid>
-            </Grid>
+                </StackPanel>
+            </ScrollViewer>
         </Border>
         
         <!-- 하단 상태바 -->
-        <Border Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="1" 
+        <Border Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="1" 
                Background="#FF2E3440" 
                BorderBrush="#FF4C566A" 
                BorderThickness="0,1,0,0"

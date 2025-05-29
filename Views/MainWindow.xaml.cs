@@ -389,16 +389,15 @@ public partial class MainWindow : Window
     {
         if (_cctvWindow != null)
         {
-            // 메인 윈도우의 중앙 영역(Grid.Column="1") 위치에 CCTV 윈도우 고정
-            double leftPanelWidth = 200; // 좌측 패널 너비
-            double rightPanelWidth = 300; // 우측 패널 너비
+            // 2열 레이아웃: 왼쪽 영상 영역(Grid.Column="0")에 CCTV 윈도우 고정
+            double rightPanelWidth = 350; // 우측 패널 너비
             double margin = 10; // 마진
             
-            // 중앙 영역의 위치와 크기 계산
-            double cctvX = this.Left + leftPanelWidth + margin;
-            double cctvY = this.Top + 40; // 타이틀바 높이 고려
-            double cctvWidth = this.Width - leftPanelWidth - rightPanelWidth - (margin * 3);
-            double cctvHeight = this.Height - 40 - 30 - (margin * 2); // 타이틀바와 상태바 제외
+            // 왼쪽 영상 영역의 위치와 크기 계산
+            double cctvX = this.Left + margin + 20; // 추가 왼쪽 마진
+            double cctvY = this.Top + 40 + 20; // 타이틀바 높이 + 상단 마진
+            double cctvWidth = this.Width - rightPanelWidth - (margin * 3) - 40; // 추가 마진 고려
+            double cctvHeight = this.Height - 40 - 30 - (margin * 2) - 40; // 타이틀바, 상태바, 추가 마진 제외
             
             // 화면 경계 확인
             double screenWidth = SystemParameters.PrimaryScreenWidth;
@@ -415,8 +414,8 @@ public partial class MainWindow : Window
             }
             
             // 최소 크기 보장
-            cctvWidth = Math.Max(cctvWidth, 300);
-            cctvHeight = Math.Max(cctvHeight, 200);
+            cctvWidth = Math.Max(cctvWidth, 400);
+            cctvHeight = Math.Max(cctvHeight, 300);
             
             _cctvWindow.Left = cctvX;
             _cctvWindow.Top = cctvY;
