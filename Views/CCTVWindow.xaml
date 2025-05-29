@@ -1,0 +1,31 @@
+<Window x:Class="CCTV.Views.CCTVWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:CCTV.Views"
+        mc:Ignorable="d"
+        Title="CCTV 모니터링" Height="450" Width="800"
+        Closed="Window_Closed">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" /> <!-- 비디오 영역 -->
+            <RowDefinition Height="Auto" /> <!-- 컨트롤 영역 -->
+        </Grid.RowDefinitions>
+        
+        <!-- 비디오 전용 컨테이너 -->
+        <Border Grid.Row="0" ClipToBounds="True" Background="Black"
+                BorderBrush="Gray" BorderThickness="1" Margin="5">
+            <Image x:Name="VideoImage" Stretch="Uniform" 
+                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Border>
+        
+        <!-- 컨트롤 영역 -->
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="5" Background="White">
+            <!-- 상태 표시 -->
+            <TextBlock Text="{Binding StatusMessage}" 
+                       VerticalAlignment="Center" Margin="10,0" />
+        
+        </StackPanel>
+    </Grid>
+</Window> 
