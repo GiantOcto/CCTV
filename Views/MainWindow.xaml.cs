@@ -25,6 +25,7 @@ public partial class MainWindow : Window
     
     // CCTV 윈도우 관련 필드 추가
     private CCTVWindow? _cctvWindow;
+    private RecordingPlayerWindow? _recordingPlayerWindow;
 
     public MainWindow()
     {
@@ -44,6 +45,15 @@ public partial class MainWindow : Window
         try
         {
             CreateCCTVWindow(); // CCTV 윈도우를 먼저 생성
+            CreateRecordingPlayerWindow(); // 녹화영상 윈도우도 함께 생성
+            
+            // 메인 윈도우가 완전히 렌더링된 후 위치 재조정
+            this.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                PositionCCTVWindow();
+                PositionRecordingPlayerWindow();
+            }), System.Windows.Threading.DispatcherPriority.Loaded);
+            
             InitializeCCTV(); // 그 다음 초기화 (연결은 하지 않음)
             UpdateStatus("CCTV 제어 프로그램이 시작되었습니다. 채널 버튼을 클릭하여 연결하세요.");
         }
@@ -352,6 +362,12 @@ public partial class MainWindow : Window
             {
                 _cctvWindow.Close();
             }
+            
+            // 녹화영상 윈도우 닫기
+            if (_recordingPlayerWindow != null)
+            {
+                _recordingPlayerWindow.Close();
+            }
         }
         catch (Exception ex)
         {
@@ -384,6 +400,66 @@ public partial class MainWindow : Window
             _cctvWindow.Show();
         }
     }
+
+    private void CreateRecordingPlayerWindow()
+    {
+        if (_recordingPlayerWindow == null)
+        {
+            _recordingPlayerWindow = new RecordingPlayerWindow();
+            _recordingPlayerWindow.Owner = this;
+            _recordingPlayerWindow.WindowStyle = WindowStyle.None;
+            _recordingPlayerWindow.ShowInTaskbar = false;
+            _recordingPlayerWindow.Topmost = true;
+            
+            // 녹화영상 윈도우 위치 설정
+            PositionRecordingPlayerWindow();
+            
+            _recordingPlayerWindow.Show();
+        }
+    }
+
+    private void PositionRecordingPlayerWindow()
+    {
+        if (_recordingPlayerWindow != null)
+        {
+            // 2열 레이아웃에 맞춰 위치 계산
+            double rightPanelWidth = 350; // 우측 패널 너비
+            double margin = 10; // 마진
+            
+            // 왼쪽 영상 영역의 위치와 크기 계산 (CCTV 윈도우와 동일)
+            double recordingX = this.Left + margin + 20; // CCTV 윈도우와 동일한 X 위치
+            double recordingWidth = this.Width - rightPanelWidth - (margin * 3) - 40; // CCTV 윈도우와 동일한 너비
+            double totalHeight = this.Height - 40 - 30 - (margin * 2) - 40; // 전체 사용 가능 높이
+            double recordingHeight = totalHeight / 2; // 절반 높이
+            
+            // CCTV 윈도우의 시작 Y 위치와 높이를 기준으로 바로 아래에 배치
+            double cctvStartY = this.Top + 40 + 20; // CCTV 윈도우 시작 Y 위치
+            double recordingY = cctvStartY + recordingHeight + 5; // CCTV 윈도우 아래 + 5px 간격
+            
+            // 화면 경계 확인
+            double screenWidth = SystemParameters.PrimaryScreenWidth;
+            double screenHeight = SystemParameters.PrimaryScreenHeight;
+            
+            if (recordingX + recordingWidth > screenWidth)
+            {
+                recordingWidth = screenWidth - recordingX - 10;
+            }
+            
+            if (recordingY + recordingHeight > screenHeight)
+            {
+                recordingHeight = screenHeight - recordingY - 10;
+            }
+            
+            // 최소 크기 보장
+            recordingWidth = Math.Max(recordingWidth, 400);
+            recordingHeight = Math.Max(recordingHeight, 150);
+            
+            _recordingPlayerWindow.Left = recordingX;
+            _recordingPlayerWindow.Top = recordingY;
+            _recordingPlayerWindow.Width = recordingWidth;
+            _recordingPlayerWindow.Height = recordingHeight;
+        }
+    }
     
     private void PositionCCTVWindow()
     {
@@ -397,7 +473,10 @@ public partial class MainWindow : Window
             double cctvX = this.Left + margin + 20; // 추가 왼쪽 마진
             double cctvY = this.Top + 40 + 20; // 타이틀바 높이 + 상단 마진
             double cctvWidth = this.Width - rightPanelWidth - (margin * 3) - 40; // 추가 마진 고려
-            double cctvHeight = this.Height - 40 - 30 - (margin * 2) - 40; // 타이틀바, 상태바, 추가 마진 제외
+            double totalHeight = this.Height - 40 - 30 - (margin * 2) - 40; // 타이틀바, 상태바, 추가 마진 제외
+            
+            // 항상 절반 높이로 설정 (녹화영상 윈도우와 공유)
+            double cctvHeight = totalHeight / 2;
             
             // 화면 경계 확인
             double screenWidth = SystemParameters.PrimaryScreenWidth;
@@ -415,7 +494,7 @@ public partial class MainWindow : Window
             
             // 최소 크기 보장
             cctvWidth = Math.Max(cctvWidth, 400);
-            cctvHeight = Math.Max(cctvHeight, 300);
+            cctvHeight = Math.Max(cctvHeight, 150);
             
             _cctvWindow.Left = cctvX;
             _cctvWindow.Top = cctvY;
@@ -426,26 +505,32 @@ public partial class MainWindow : Window
     
     private void MainWindow_LocationChanged(object? sender, EventArgs e)
     {
+        System.Diagnostics.Debug.WriteLine($"MainWindow_LocationChanged: Left={this.Left}, Top={this.Top}");
         PositionCCTVWindow();
+        PositionRecordingPlayerWindow();
     }
     
     private void MainWindow_SizeChanged(object sender, SizeChangedEventArgs e)
     {
         PositionCCTVWindow();
+        PositionRecordingPlayerWindow();
     }
     
     private void MainWindow_StateChanged(object? sender, EventArgs e)
     {
-        if (_cctvWindow != null)
+        if (_cctvWindow != null && _recordingPlayerWindow != null)
         {
             if (this.WindowState == WindowState.Minimized)
             {
                 _cctvWindow.Hide();
+                _recordingPlayerWindow.Hide();
             }
             else
             {
                 _cctvWindow.Show();
+                _recordingPlayerWindow.Show();
                 PositionCCTVWindow();
+                PositionRecordingPlayerWindow();
             }
         }
     }

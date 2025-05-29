@@ -25,6 +25,14 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <Link>%(Filename)%(Extension)</Link>
     </None>
+    <None Include="SDK\Hikvision\HCNetSDKCom\*.dll">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <Link>%(Filename)%(Extension)</Link>
+    </None>
+    <None Include="SDK\Hikvision\HCNetSDKCom\*.lib">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <Link>%(Filename)%(Extension)</Link>
+    </None>
   </ItemGroup>
 
 </Project>

@@ -7,6 +7,7 @@
         mc:Ignorable="d"
         Title="CCTV 제어 시스템" Height="1080" Width="1920"
         WindowStartupLocation="CenterScreen"
+        WindowState="Normal"
         Loaded="Window_Loaded"
         Background="#FF2E3440">
     

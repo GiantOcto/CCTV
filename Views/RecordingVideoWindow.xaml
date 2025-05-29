@@ -1,0 +1,18 @@
+<Window x:Class="CCTV.Views.RecordingVideoWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:CCTV.Views"
+        mc:Ignorable="d"
+        Title="RecordingVideoWindow" Height="450" Width="800"
+        WindowStyle="None" ResizeMode="NoResize" ShowInTaskbar="False"
+        Closed="Window_Closed">
+    <Grid>
+        <!-- 비디오 전용 컨테이너 -->
+        <Border Grid.Row="0" ClipToBounds="True" Background="Black">
+            <Image x:Name="VideoImage" Stretch="Uniform" 
+                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Border>
+    </Grid>
+</Window> 
