@@ -26,6 +26,9 @@ public partial class MainWindow : Window
     // CCTV 윈도우 관련 필드 추가
     private CCTVWindow? _cctvWindow;
     private RecordingPlayerWindow? _recordingPlayerWindow;
+    
+    // 화면 전환 관련 필드 추가
+    private bool _isShowingCCTV = true; // 현재 CCTV 화면을 보여주고 있는지 여부
 
     public MainWindow()
     {
@@ -50,8 +53,8 @@ public partial class MainWindow : Window
             // 메인 윈도우가 완전히 렌더링된 후 위치 재조정
             this.Dispatcher.BeginInvoke(new Action(() =>
             {
-                PositionCCTVWindow();
-                PositionRecordingPlayerWindow();
+                // 초기에는 CCTV 화면만 표시
+                ShowCCTVView();
             }), System.Windows.Threading.DispatcherPriority.Loaded);
             
             InitializeCCTV(); // 그 다음 초기화 (연결은 하지 않음)
@@ -335,6 +338,108 @@ public partial class MainWindow : Window
         }
     }
 
+    // 화면 전환 이벤트 핸들러
+    private void ViewToggleButton_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            _isShowingCCTV = !_isShowingCCTV;
+            
+            if (_isShowingCCTV)
+            {
+                // CCTV 화면으로 전환
+                ShowCCTVView();
+                ViewToggleButton.Content = "🎬 녹화 재생";
+                CurrentViewText.Text = "현재: 실시간 CCTV 화면";
+                UpdateStatus("실시간 CCTV 화면으로 전환");
+            }
+            else
+            {
+                // 녹화영상 화면으로 전환
+                ShowRecordingView();
+                ViewToggleButton.Content = "📹 실시간 영상";
+                CurrentViewText.Text = "현재: 녹화영상 재생 화면";
+                UpdateStatus("녹화영상 재생 화면으로 전환");
+            }
+        }
+        catch (Exception ex)
+        {
+            UpdateStatus($"화면 전환 오류: {ex.Message}");
+        }
+    }
+    
+    // CCTV 화면 표시
+    private void ShowCCTVView()
+    {
+        if (_cctvWindow != null)
+        {
+            _cctvWindow.Show();
+            PositionFullScreenWindow(_cctvWindow);
+        }
+        
+        if (_recordingPlayerWindow != null)
+        {
+            _recordingPlayerWindow.Hide();
+        }
+    }
+    
+    // 녹화영상 화면 표시
+    private void ShowRecordingView()
+    {
+        if (_recordingPlayerWindow != null)
+        {
+            _recordingPlayerWindow.Show();
+            PositionFullScreenWindow(_recordingPlayerWindow);
+        }
+        
+        if (_cctvWindow != null)
+        {
+            _cctvWindow.Hide();
+        }
+    }
+    
+    // 윈도우를 전체 영상 영역에 배치
+    private void PositionFullScreenWindow(Window window)
+    {
+        if (window != null)
+        {
+            // 2열 레이아웃에서 왼쪽 영상 영역 전체를 사용
+            double rightPanelWidth = 350; // 우측 패널 너비
+            double margin = 10; // 마진
+            
+            // 왼쪽 영상 영역의 위치와 크기 계산
+            double windowX = this.Left + margin + 20; // 추가 왼쪽 마진
+            double windowY = this.Top + 40 + 20; // 타이틀바 높이 + 상단 마진
+            double windowWidth = this.Width - rightPanelWidth - (margin * 3) - 40; // 추가 마진 고려
+            double windowHeight = this.Height - 40 - 30 - (margin * 2) - 40; // 타이틀바, 상태바, 추가 마진 제외
+            
+            // 화면 경계 확인
+            double screenWidth = SystemParameters.PrimaryScreenWidth;
+            double screenHeight = SystemParameters.PrimaryScreenHeight;
+            
+            if (windowX + windowWidth > screenWidth)
+            {
+                windowWidth = screenWidth - windowX - 10;
+            }
+            
+            if (windowY + windowHeight > screenHeight)
+            {
+                windowHeight = screenHeight - windowY - 10;
+            }
+            
+            // 최소 크기 보장
+            windowWidth = Math.Max(windowWidth, 400);
+            windowHeight = Math.Max(windowHeight, 300);
+            
+            window.Left = windowX;
+            window.Top = windowY;
+            window.Width = windowWidth;
+            window.Height = windowHeight;
+            
+            System.Diagnostics.Debug.WriteLine($"전체 화면 윈도우 위치 설정: {window.GetType().Name} - Left={windowX}, Top={windowY}, Width={windowWidth}, Height={windowHeight}");
+        }
+    }
+
     // 유틸리티 메서드들
     private void UpdateStatus(string message)
     {
@@ -414,7 +519,8 @@ public partial class MainWindow : Window
             // 녹화영상 윈도우 위치 설정
             PositionRecordingPlayerWindow();
             
-            _recordingPlayerWindow.Show();
+            // 초기에는 숨김 - 화면 전환 버튼으로만 표시
+            // _recordingPlayerWindow.Show(); <- 제거
         }
     }
 
@@ -506,14 +612,29 @@ public partial class MainWindow : Window
     private void MainWindow_LocationChanged(object? sender, EventArgs e)
     {
         System.Diagnostics.Debug.WriteLine($"MainWindow_LocationChanged: Left={this.Left}, Top={this.Top}");
-        PositionCCTVWindow();
-        PositionRecordingPlayerWindow();
+        
+        // 현재 표시되고 있는 윈도우만 위치 업데이트
+        if (_isShowingCCTV && _cctvWindow != null && _cctvWindow.IsVisible)
+        {
+            PositionFullScreenWindow(_cctvWindow);
+        }
+        else if (!_isShowingCCTV && _recordingPlayerWindow != null && _recordingPlayerWindow.IsVisible)
+        {
+            PositionFullScreenWindow(_recordingPlayerWindow);
+        }
     }
     
     private void MainWindow_SizeChanged(object sender, SizeChangedEventArgs e)
     {
-        PositionCCTVWindow();
-        PositionRecordingPlayerWindow();
+        // 현재 표시되고 있는 윈도우만 크기 업데이트
+        if (_isShowingCCTV && _cctvWindow != null && _cctvWindow.IsVisible)
+        {
+            PositionFullScreenWindow(_cctvWindow);
+        }
+        else if (!_isShowingCCTV && _recordingPlayerWindow != null && _recordingPlayerWindow.IsVisible)
+        {
+            PositionFullScreenWindow(_recordingPlayerWindow);
+        }
     }
     
     private void MainWindow_StateChanged(object? sender, EventArgs e)
@@ -527,10 +648,15 @@ public partial class MainWindow : Window
             }
             else
             {
-                _cctvWindow.Show();
-                _recordingPlayerWindow.Show();
-                PositionCCTVWindow();
-                PositionRecordingPlayerWindow();
+                // 현재 표시 모드에 따라 적절한 윈도우만 표시
+                if (_isShowingCCTV)
+                {
+                    ShowCCTVView();
+                }
+                else
+                {
+                    ShowRecordingView();
+                }
             }
         }
     }

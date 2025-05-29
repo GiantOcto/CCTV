@@ -162,6 +162,17 @@
                                 Click="CCTVButton_Click" Height="40"/>
                     </GroupBox>
 
+                    <!-- 화면 전환 섹션 -->
+                    <GroupBox Header="화면 전환" Foreground="White" BorderBrush="#FF5E81AC" Margin="0,0,0,20">
+                        <StackPanel>
+                            <Button x:Name="ViewToggleButton" Content="📹 실시간 영상" Style="{StaticResource ButtonStyle}"
+                                    Click="ViewToggleButton_Click" Height="40" Background="#FF81A1C1"/>
+                            <TextBlock x:Name="CurrentViewText" Text="현재: 실시간 CCTV 화면" 
+                                      Foreground="#FFECEFF4" HorizontalAlignment="Center" 
+                                      FontSize="10" Margin="0,5,0,0"/>
+                        </StackPanel>
+                    </GroupBox>
+
                     <!-- 채널 선택 섹션 -->
                     <GroupBox Header="채널 선택" Foreground="White" BorderBrush="#FF5E81AC" Margin="0,0,0,20">
                         <StackPanel>
