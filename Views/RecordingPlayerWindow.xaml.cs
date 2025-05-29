@@ -71,6 +71,9 @@ namespace CCTV.Views
             
             // Owner 윈도우 설정 시 위치 추적 이벤트 등록
             this.SourceInitialized += RecordingPlayerWindow_SourceInitialized;
+            
+            // Visibility 변경 이벤트 등록
+            this.IsVisibleChanged += RecordingPlayerWindow_IsVisibleChanged;
         }
         
         private void RecordingPlayerWindow_SourceInitialized(object sender, EventArgs e)
@@ -87,10 +90,17 @@ namespace CCTV.Views
         
         private void Owner_LocationChanged(object sender, EventArgs e)
         {
-            // Owner 윈도우의 위치가 변경되면 녹화재생 윈도우도 함께 이동
+            // Owner 윈도우의 위치가 변경되면 녹화재생 윈도우 위치도 조정
             if (this.Owner != null && this.IsVisible)
             {
                 UpdatePositionRelativeToOwner();
+                
+                // 비디오 윈도우가 있다면 함께 위치 업데이트
+                if (_videoWindow != null && _videoWindow.Visibility == Visibility.Visible)
+                {
+                    UpdateVideoWindowPosition();
+                }
+                
                 System.Diagnostics.Debug.WriteLine($"RecordingPlayerWindow: Owner 위치 변경에 따른 위치 업데이트");
             }
         }
@@ -101,6 +111,13 @@ namespace CCTV.Views
             if (this.Owner != null && this.IsVisible)
             {
                 UpdatePositionRelativeToOwner();
+                
+                // 비디오 윈도우가 있다면 함께 위치 업데이트
+                if (_videoWindow != null && _videoWindow.Visibility == Visibility.Visible)
+                {
+                    UpdateVideoWindowPosition();
+                }
+                
                 System.Diagnostics.Debug.WriteLine($"RecordingPlayerWindow: Owner 크기 변경에 따른 위치 업데이트");
             }
         }
@@ -113,6 +130,13 @@ namespace CCTV.Views
                 if (this.Owner.WindowState == WindowState.Minimized)
                 {
                     this.Hide();
+                    
+                    // 비디오 윈도우도 함께 숨김
+                    if (_videoWindow != null)
+                    {
+                        _videoWindow.Hide();
+                    }
+                    
                     System.Diagnostics.Debug.WriteLine("RecordingPlayerWindow: Owner 최소화로 인한 숨김");
                 }
                 else if (this.Owner.WindowState == WindowState.Normal || this.Owner.WindowState == WindowState.Maximized)
@@ -121,6 +145,14 @@ namespace CCTV.Views
                     {
                         this.Show();
                         UpdatePositionRelativeToOwner();
+                        
+                        // 비디오 윈도우도 함께 표시하고 위치 업데이트
+                        if (_videoWindow != null)
+                        {
+                            _videoWindow.Show();
+                            UpdateVideoWindowPosition();
+                        }
+                        
                         System.Diagnostics.Debug.WriteLine("RecordingPlayerWindow: Owner 복원으로 인한 표시");
                     }
                 }
@@ -732,6 +764,8 @@ namespace CCTV.Views
                 _videoWindow.WindowStyle = WindowStyle.None;
                 _videoWindow.ResizeMode = ResizeMode.NoResize;
                 _videoWindow.ShowInTaskbar = false;
+                _videoWindow.ShowActivated = false; // 활성화되지 않도록 설정
+                _videoWindow.Topmost = true; // 항상 위에 표시
                 
                 // 비디오 컨트롤 참조 설정
                 videoControl = _videoWindow.VideoControl;
@@ -739,18 +773,59 @@ namespace CCTV.Views
                 // UI가 완전히 로드된 후에 크기와 위치 설정
                 this.Dispatcher.BeginInvoke(new Action(() =>
                 {
-                    // VideoContainer 크기에 맞게 조정
-                    VideoContainer.UpdateLayout();
-                    _videoWindow.Width = VideoContainer.ActualWidth > 0 ? VideoContainer.ActualWidth : 780;
-                    _videoWindow.Height = VideoContainer.ActualHeight > 0 ? VideoContainer.ActualHeight : 380;
-                    
-                    // Border 위치를 기준으로 비디오 창 위치 조정
-                    UpdateVideoWindowPosition();
-                    
-                    // 비디오 창 표시
-                    _videoWindow.Show();
-                    
-                    LogError($"비디오 창 초기화 완료: Width={_videoWindow.Width}, Height={_videoWindow.Height}");
+                    try
+                    {
+                        // VideoContainer의 부모 Border 찾기
+                        Border parentBorder = VideoContainer.Parent as Border;
+                        if (parentBorder != null)
+                        {
+                            // 레이아웃 업데이트
+                            parentBorder.UpdateLayout();
+                            
+                            // Border의 실제 내부 영역 계산
+                            double borderLeft = parentBorder.BorderThickness.Left;
+                            double borderTop = parentBorder.BorderThickness.Top;
+                            double borderRight = parentBorder.BorderThickness.Right;
+                            double borderBottom = parentBorder.BorderThickness.Bottom;
+                            
+                            double actualWidth = parentBorder.ActualWidth - borderLeft - borderRight;
+                            double actualHeight = parentBorder.ActualHeight - borderTop - borderBottom;
+                            
+                            // 유효한 크기인 경우 설정
+                            if (actualWidth > 10 && actualHeight > 10)
+                            {
+                                _videoWindow.Width = actualWidth;
+                                _videoWindow.Height = actualHeight;
+                                LogError($"비디오 창 초기 크기 설정: Width={actualWidth}, Height={actualHeight}");
+                            }
+                            else
+                            {
+                                // 기본 크기 사용
+                                _videoWindow.Width = 780;
+                                _videoWindow.Height = 380;
+                                LogError($"기본 크기 사용: Width=780, Height=380 (계산된 크기가 너무 작음: {actualWidth}x{actualHeight})");
+                            }
+                        }
+                        else
+                        {
+                            // 부모 Border를 찾을 수 없는 경우 기본 크기
+                            _videoWindow.Width = 780;
+                            _videoWindow.Height = 380;
+                            LogError("부모 Border를 찾을 수 없어 기본 크기 사용");
+                        }
+                        
+                        // 위치 설정
+                        UpdateVideoWindowPosition();
+                        
+                        // 비디오 창 표시
+                        _videoWindow.Show();
+                        
+                        LogError($"비디오 창 초기화 완료: Width={_videoWindow.Width}, Height={_videoWindow.Height}");
+                    }
+                    catch (Exception ex)
+                    {
+                        LogError($"비디오 창 초기 설정 오류: {ex.Message}");
+                    }
                 }), System.Windows.Threading.DispatcherPriority.Render);
                 
                 // 메인 윈도우 위치 변경 시 비디오 창 위치도 조정
@@ -765,7 +840,7 @@ namespace CCTV.Views
                 this.SizeChanged += (s, e) => {
                     if (_videoWindow != null && _videoWindow.Visibility == Visibility.Visible)
                     {
-                        UpdateVideoWindowSize();
+                        UpdateVideoWindowPosition(); // UpdateVideoWindowSize 대신 UpdateVideoWindowPosition 사용
                     }
                 };
                 
@@ -782,16 +857,44 @@ namespace CCTV.Views
         {
             try
             {
-                // 컨테이너가 로드되지 않은 경우 건너뜀
-                if (!IsLoaded || VideoContainer == null)
+                if (_videoWindow == null || !IsLoaded || VideoContainer == null)
                     return;
                 
-                // 화면 좌표로 직접 변환하여 정확한 위치 계산
-                var containerPosition = VideoContainer.PointToScreen(new Point(0, 0));
-                _videoWindow.Left = containerPosition.X;
-                _videoWindow.Top = containerPosition.Y;
+                // VideoContainer의 부모 Border를 찾아서 정확한 비디오 영역 계산
+                Border parentBorder = VideoContainer.Parent as Border;
+                if (parentBorder == null)
+                    return;
                 
-                LogError($"비디오 창 위치 업데이트: Left={_videoWindow.Left}, Top={_videoWindow.Top}");
+                // 부모 Border의 화면 좌표 위치 가져오기
+                Point containerScreenPosition = parentBorder.PointToScreen(new Point(0, 0));
+                
+                // Border의 BorderThickness 고려
+                double borderLeft = parentBorder.BorderThickness.Left;
+                double borderTop = parentBorder.BorderThickness.Top;
+                double borderRight = parentBorder.BorderThickness.Right;
+                double borderBottom = parentBorder.BorderThickness.Bottom;
+                
+                // 실제 내부 영역 계산 (Border 제외)
+                double actualLeft = containerScreenPosition.X + borderLeft;
+                double actualTop = containerScreenPosition.Y + borderTop;
+                double actualWidth = parentBorder.ActualWidth - borderLeft - borderRight;
+                double actualHeight = parentBorder.ActualHeight - borderTop - borderBottom;
+                
+                // 최소 크기 보장
+                if (actualWidth < 10 || actualHeight < 10)
+                {
+                    LogError($"비디오 영역 크기가 너무 작음: Width={actualWidth}, Height={actualHeight}");
+                    return;
+                }
+                
+                // 비디오 윈도우 위치와 크기 설정
+                _videoWindow.Left = actualLeft;
+                _videoWindow.Top = actualTop;
+                _videoWindow.Width = actualWidth;
+                _videoWindow.Height = actualHeight;
+                
+                LogError($"비디오 창 정확한 위치 업데이트: Left={actualLeft}, Top={actualTop}, Width={actualWidth}, Height={actualHeight}");
+                LogError($"Border 정보: BorderThickness=({borderLeft},{borderTop},{borderRight},{borderBottom}), ActualSize=({parentBorder.ActualWidth},{parentBorder.ActualHeight})");
             }
             catch (Exception ex)
             {
@@ -799,36 +902,7 @@ namespace CCTV.Views
             }
         }
         
-        // 비디오 창 크기 업데이트
-        private void UpdateVideoWindowSize()
-        {
-            try
-            {
-                if (!IsLoaded || VideoContainer == null || _videoWindow == null)
-                    return;
-                
-                // 컨테이너의 실제 크기 가져오기
-                VideoContainer.UpdateLayout();
-                double width = VideoContainer.ActualWidth;
-                double height = VideoContainer.ActualHeight;
-                
-                // 유효한 크기인 경우에만 적용
-                if (width > 10 && height > 10)
-                {
-                    _videoWindow.Width = width;
-                    _videoWindow.Height = height;
-                    
-                    // 위치도 함께 업데이트
-                    UpdateVideoWindowPosition();
-                    
-                    LogError($"비디오 창 크기 업데이트: Width={width}, Height={height}");
-                }
-            }
-            catch (Exception ex)
-            {
-                LogError($"비디오 창 크기 업데이트 오류: {ex.Message}");
-            }
-        }
+        // 비디오 창 크기 업데이트 메서드 삭제됨 - UpdateVideoWindowPosition에서 크기와 위치를 함께 처리
 
         private void ProgressTimer_Tick(object sender, EventArgs e)
         {
@@ -1098,6 +1172,32 @@ namespace CCTV.Views
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"RecordingPlayerWindow 종료 중 오류: {ex.Message}");
+            }
+        }
+        
+        // Visibility 변경 이벤트 핸들러
+        private void RecordingPlayerWindow_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+        {
+            try
+            {
+                bool isVisible = (bool)e.NewValue;
+                LogError($"RecordingPlayerWindow IsVisible 변경됨: {isVisible}");
+                
+                if (!isVisible) // IsVisible가 false가 되었을 때
+                {
+                    // RecordingPlayerWindow가 숨겨지면 비디오 윈도우도 함께 숨김
+                    HideVideoWindow();
+                    LogError("RecordingPlayerWindow가 숨겨져서 RecordingVideoWindow도 함께 숨김");
+                }
+                else // IsVisible가 true가 되었을 때
+                {
+                    LogError("RecordingPlayerWindow가 표시됨");
+                    // 자동으로 비디오 윈도우를 표시하지 않음 - 명시적으로 호출할 때만
+                }
+            }
+            catch (Exception ex)
+            {
+                LogError($"IsVisible 변경 처리 중 오류: {ex.Message}");
             }
         }
 
@@ -2245,6 +2345,41 @@ namespace CCTV.Views
             catch(Exception ex)
             {
                 LogError($"DatePicker_Loaded 오류: {ex.Message}, 스택 추적: {ex.StackTrace}");
+            }
+        }
+
+        // RecordingVideoWindow를 숨기는 public 메서드 추가
+        public void HideVideoWindow()
+        {
+            try
+            {
+                if (_videoWindow != null && _videoWindow.IsVisible)
+                {
+                    _videoWindow.Hide();
+                    LogError("RecordingVideoWindow 숨김 처리 완료");
+                }
+            }
+            catch (Exception ex)
+            {
+                LogError($"RecordingVideoWindow 숨김 처리 오류: {ex.Message}");
+            }
+        }
+        
+        // RecordingVideoWindow를 표시하는 public 메서드 추가
+        public void ShowVideoWindow()
+        {
+            try
+            {
+                if (_videoWindow != null && !_videoWindow.IsVisible)
+                {
+                    _videoWindow.Show();
+                    UpdateVideoWindowPosition();
+                    LogError("RecordingVideoWindow 표시 처리 완료");
+                }
+            }
+            catch (Exception ex)
+            {
+                LogError($"RecordingVideoWindow 표시 처리 오류: {ex.Message}");
             }
         }
     }
