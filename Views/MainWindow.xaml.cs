@@ -423,33 +423,64 @@ public partial class MainWindow : Window
     {
         if (window != null)
         {
+            System.Diagnostics.Debug.WriteLine($"=== PositionFullScreenWindow 시작 ===");
+            System.Diagnostics.Debug.WriteLine($"메인 윈도우 크기: Width={this.Width}, Height={this.Height}");
+            System.Diagnostics.Debug.WriteLine($"메인 윈도우 위치: Left={this.Left}, Top={this.Top}");
+            System.Diagnostics.Debug.WriteLine($"WindowState: {this.WindowState}");
+            
             // 2열 레이아웃에서 왼쪽 영상 영역 전체를 사용
             double rightPanelWidth = 350; // 우측 패널 너비
             double margin = 10; // 마진
             
-            // 왼쪽 영상 영역의 위치와 크기 계산
-            double windowX = this.Left + margin + 20; // 추가 왼쪽 마진
-            double windowY = this.Top + 40 + 20; // 타이틀바 높이 + 상단 마진
-            double windowWidth = this.Width - rightPanelWidth - (margin * 3) - 40; // 추가 마진 고려
-            double windowHeight = this.Height - 40 - 30 - (margin * 2) - 40; // 타이틀바, 상태바, 추가 마진 제외
+            double windowX, windowY, windowWidth, windowHeight;
+            
+            if (this.WindowState == WindowState.Maximized)
+            {
+                // 최대화된 상태에서는 화면 작업 영역을 사용
+                var workArea = SystemParameters.WorkArea;
+                System.Diagnostics.Debug.WriteLine($"최대화 상태 - 작업 영역: Width={workArea.Width}, Height={workArea.Height}");
+                
+                windowX = workArea.Left + margin + 20;
+                windowY = workArea.Top + 60; // 타이틀바와 메뉴 영역을 고려한 위치
+                windowWidth = workArea.Width - rightPanelWidth - (margin * 3) - 40;
+                windowHeight = workArea.Height - 60 - 30 - (margin * 2) - 40; // 상단 여백과 상태바, 마진 제외
+            }
+            else
+            {
+                // 일반 상태에서는 메인 윈도우 크기 사용
+                windowX = this.Left + margin + 20;
+                windowY = this.Top + 40 + 20; // 타이틀바 높이 + 상단 마진
+                windowWidth = this.Width - rightPanelWidth - (margin * 3) - 40;
+                windowHeight = this.Height - 40 - 30 - (margin * 2) - 40; // 타이틀바, 상태바, 추가 마진 제외
+            }
+            
+            System.Diagnostics.Debug.WriteLine($"계산된 자식 윈도우 크기: Width={windowWidth}, Height={windowHeight}");
+            System.Diagnostics.Debug.WriteLine($"계산된 자식 윈도우 위치: Left={windowX}, Top={windowY}");
             
             // 화면 경계 확인
             double screenWidth = SystemParameters.PrimaryScreenWidth;
             double screenHeight = SystemParameters.PrimaryScreenHeight;
             
+            System.Diagnostics.Debug.WriteLine($"화면 크기: Width={screenWidth}, Height={screenHeight}");
+            
             if (windowX + windowWidth > screenWidth)
             {
                 windowWidth = screenWidth - windowX - 10;
+                System.Diagnostics.Debug.WriteLine($"화면 경계 초과로 폭 조정: Width={windowWidth}");
             }
             
             if (windowY + windowHeight > screenHeight)
             {
                 windowHeight = screenHeight - windowY - 10;
+                System.Diagnostics.Debug.WriteLine($"화면 경계 초과로 높이 조정: Height={windowHeight}");
             }
             
             // 최소 크기 보장
             windowWidth = Math.Max(windowWidth, 400);
             windowHeight = Math.Max(windowHeight, 300);
+            
+            System.Diagnostics.Debug.WriteLine($"최종 자식 윈도우 크기: Width={windowWidth}, Height={windowHeight}");
+            System.Diagnostics.Debug.WriteLine($"최종 자식 윈도우 위치: Left={windowX}, Top={windowY}");
             
             window.Left = windowX;
             window.Top = windowY;
@@ -457,6 +488,7 @@ public partial class MainWindow : Window
             window.Height = windowHeight;
             
             System.Diagnostics.Debug.WriteLine($"전체 화면 윈도우 위치 설정: {window.GetType().Name} - Left={windowX}, Top={windowY}, Width={windowWidth}, Height={windowHeight}");
+            System.Diagnostics.Debug.WriteLine($"=== PositionFullScreenWindow 완료 ===");
         }
     }
 
@@ -480,18 +512,32 @@ public partial class MainWindow : Window
     {
         try
         {
-            _cctvViewModel?.Dispose();
+            // CCTV ViewModel 정리
+            if (_cctvViewModel != null)
+            {
+                _cctvViewModel.Dispose();
+                _cctvViewModel = null;
+            }
             
             // CCTV 윈도우 닫기
             if (_cctvWindow != null)
             {
                 _cctvWindow.Close();
+                _cctvWindow = null;
             }
             
             // 녹화영상 윈도우 닫기
             if (_recordingPlayerWindow != null)
             {
                 _recordingPlayerWindow.Close();
+                _recordingPlayerWindow = null;
+            }
+            
+            // 타이머 정리
+            if (_deactivationTimer != null)
+            {
+                _deactivationTimer.Stop();
+                _deactivationTimer = null;
             }
         }
         catch (Exception ex)
@@ -648,37 +694,69 @@ public partial class MainWindow : Window
     
     private void MainWindow_SizeChanged(object sender, SizeChangedEventArgs e)
     {
+        System.Diagnostics.Debug.WriteLine($"=== MainWindow_SizeChanged 호출됨 ===");
+        System.Diagnostics.Debug.WriteLine($"이전 크기: Width={e.PreviousSize.Width}, Height={e.PreviousSize.Height}");
+        System.Diagnostics.Debug.WriteLine($"새 크기: Width={e.NewSize.Width}, Height={e.NewSize.Height}");
+        System.Diagnostics.Debug.WriteLine($"현재 WindowState: {this.WindowState}");
+        System.Diagnostics.Debug.WriteLine($"_isShowingCCTV: {_isShowingCCTV}");
+        
         // 현재 표시되고 있는 윈도우만 크기 업데이트
         if (_isShowingCCTV && _cctvWindow != null && _cctvWindow.IsVisible)
         {
+            System.Diagnostics.Debug.WriteLine("CCTV 윈도우 크기 업데이트 시작");
             PositionFullScreenWindow(_cctvWindow);
+            System.Diagnostics.Debug.WriteLine("CCTV 윈도우 크기 업데이트 완료");
         }
         else if (!_isShowingCCTV && _recordingPlayerWindow != null && _recordingPlayerWindow.IsVisible)
         {
+            System.Diagnostics.Debug.WriteLine("녹화영상 윈도우 크기 업데이트 시작");
             PositionFullScreenWindow(_recordingPlayerWindow);
+            System.Diagnostics.Debug.WriteLine("녹화영상 윈도우 크기 업데이트 완료");
         }
+        else
+        {
+            System.Diagnostics.Debug.WriteLine("크기 업데이트할 자식 윈도우 없음");
+            System.Diagnostics.Debug.WriteLine($"CCTV 윈도우: null={_cctvWindow == null}, IsVisible={_cctvWindow?.IsVisible}");
+            System.Diagnostics.Debug.WriteLine($"녹화영상 윈도우: null={_recordingPlayerWindow == null}, IsVisible={_recordingPlayerWindow?.IsVisible}");
+        }
+        
+        System.Diagnostics.Debug.WriteLine($"=== MainWindow_SizeChanged 완료 ===");
     }
     
     private void MainWindow_StateChanged(object? sender, EventArgs e)
     {
         if (_cctvWindow != null && _recordingPlayerWindow != null)
         {
+            System.Diagnostics.Debug.WriteLine($"MainWindow_StateChanged: WindowState = {this.WindowState}");
+            
             if (this.WindowState == WindowState.Minimized)
             {
+                System.Diagnostics.Debug.WriteLine("윈도우 최소화 - 자식 윈도우 숨김");
                 _cctvWindow.Hide();
                 _recordingPlayerWindow.Hide();
             }
-            else
+            else if (this.WindowState == WindowState.Normal || this.WindowState == WindowState.Maximized)
             {
-                // 현재 표시 모드에 따라 적절한 윈도우만 표시
-                if (_isShowingCCTV)
+                System.Diagnostics.Debug.WriteLine($"윈도우 상태 변경: {this.WindowState} - 자식 윈도우 위치/크기 업데이트");
+                
+                // 약간의 지연을 두고 크기 업데이트 (윈도우 크기가 완전히 업데이트된 후)
+                this.Dispatcher.BeginInvoke(new Action(() =>
                 {
-                    ShowCCTVView();
-                }
-                else
-                {
-                    ShowRecordingView();
-                }
+                    System.Diagnostics.Debug.WriteLine($"지연된 크기 업데이트 시작 - WindowState: {this.WindowState}");
+                    System.Diagnostics.Debug.WriteLine($"지연된 업데이트 시 메인 윈도우 크기: Width={this.Width}, Height={this.Height}");
+                    
+                    // 현재 표시 모드에 따라 적절한 윈도우만 표시하고 크기 조정
+                    if (_isShowingCCTV)
+                    {
+                        ShowCCTVView();
+                        System.Diagnostics.Debug.WriteLine("CCTV 뷰 크기 업데이트 완료");
+                    }
+                    else
+                    {
+                        ShowRecordingView();
+                        System.Diagnostics.Debug.WriteLine("녹화영상 뷰 크기 업데이트 완료");
+                    }
+                }), System.Windows.Threading.DispatcherPriority.Render);
             }
         }
     }

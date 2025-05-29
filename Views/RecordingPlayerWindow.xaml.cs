@@ -1145,6 +1145,15 @@ namespace CCTV.Views
                     System.Diagnostics.Debug.WriteLine("RecordingPlayerWindow: Owner 이벤트 핸들러 해제 완료");
                 }
                 
+                // 진행률 타이머 안전하게 정리
+                if (progressTimer != null)
+                {
+                    progressTimer.Stop();
+                    progressTimer = null;
+                    isTimerActive = false;
+                    LogError("progressTimer 안전하게 정리됨");
+                }
+                
                 // 재생 중지 및 리소스 정리
                 StopPlayback();
 
@@ -1168,10 +1177,18 @@ namespace CCTV.Views
                     _videoWindow.Close();
                     _videoWindow = null;
                 }
+                
+                // 상태 리셋 타이머 정리
+                if (statusResetTimer != null)
+                {
+                    statusResetTimer.Stop();
+                    statusResetTimer = null;
+                }
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"RecordingPlayerWindow 종료 중 오류: {ex.Message}");
+                LogError($"RecordingPlayerWindow 종료 중 오류: {ex.Message}");
             }
         }
         
@@ -1589,9 +1606,12 @@ namespace CCTV.Views
 
         private void StopPlayback()
         {
-            // 진행률 타이머 중지
-            progressTimer.Stop();
-            isTimerActive = false;
+            // 진행률 타이머 중지 (null 체크 추가)
+            if (progressTimer != null)
+            {
+                progressTimer.Stop();
+                isTimerActive = false;
+            }
 
             // 재생 중지
             if (m_lPlayHandle >= 0)
@@ -1636,9 +1656,13 @@ namespace CCTV.Views
                     StatusText.Text = "녹화 영상 재생 중";
                     PlayButton.IsEnabled = false;
                     PauseButton.IsEnabled = true;
-                    progressTimer.Start();
-                    isTimerActive = true;
-                    LogError("재생으로 타이머 재시작됨");
+                    
+                    if (progressTimer != null)
+                    {
+                        progressTimer.Start();
+                        isTimerActive = true;
+                        LogError("재생으로 타이머 재시작됨");
+                    }
                 }
                 else
                 {
@@ -1659,9 +1683,13 @@ namespace CCTV.Views
                 StatusText.Text = "일시 정지";
                 PlayButton.IsEnabled = true;
                 PauseButton.IsEnabled = false;
-                progressTimer.Stop();
-                isTimerActive = false;
-                LogError("일시 정지로 타이머 중지됨");
+                
+                if (progressTimer != null)
+                {
+                    progressTimer.Stop();
+                    isTimerActive = false;
+                    LogError("일시 정지로 타이머 중지됨");
+                }
             }
             else
             {
