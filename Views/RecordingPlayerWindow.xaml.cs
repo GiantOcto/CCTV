@@ -63,6 +63,8 @@ namespace CCTV.Views
         // 상태 텍스트를 일정 시간 후에 원래대로 되돌리는 메서드
         private DispatcherTimer statusResetTimer;
         
+        private bool _disposed = false;
+        
         public RecordingPlayerWindow()
         {
             InitializeComponent();
@@ -906,6 +908,7 @@ namespace CCTV.Views
 
         private void ProgressTimer_Tick(object sender, EventArgs e)
         {
+            // 재생 핸들과 상태 검증 (빠른 반환)
             if (m_lPlayHandle < 0 || !isPlaying) 
             {
                 // 타이머가 활성화 상태지만 재생 중이 아니면 타이머 중지
@@ -920,74 +923,82 @@ namespace CCTV.Views
 
             try
             {
-                // 슬라이더 드래그 중에는 업데이트하지 않음
+                // 슬라이더 드래그 중에는 업데이트하지 않음 (빠른 반환)
                 if (isDraggingSlider) return;
                 
-                // 현재 시간 (밀리초)
-                long currentTimeMs = DateTime.Now.Ticks / 10000;
+                // 현재 시간 계산 최적화
+                long currentTimeMs = Environment.TickCount; // DateTime.Now.Ticks보다 성능이 좋음
                 
-                // 마지막 슬라이더 변경 후 안정화 시간 이내인 경우 슬라이더 위치 업데이트 건너뛰기
+                // 마지막 슬라이더 변경 후 안정화 시간 확인
                 bool skipSliderUpdate = (currentTimeMs - lastSliderChangeTime) < SLIDER_STABILIZE_TIME && !forceSliderUpdate;
                 
-                // 현재 재생 시간 가져오기
+                // 현재 재생 시간 가져오기 (SDK 호출 최소화)
                 Models.CCTV.NET_DVR_TIME osdTime = new Models.CCTV.NET_DVR_TIME();
-                if (Models.CCTV.NET_DVR_GetPlayBackOsdTime(m_lPlayHandle, ref osdTime))
+                if (!Models.CCTV.NET_DVR_GetPlayBackOsdTime(m_lPlayHandle, ref osdTime))
                 {
-                    // 재생 시간 구성
-                    DateTime currentTime = new DateTime((int)osdTime.dwYear, (int)osdTime.dwMonth, (int)osdTime.dwDay,
-                        (int)osdTime.dwHour, (int)osdTime.dwMinute, (int)osdTime.dwSecond);
-
-                    // 총 재생 기간 계산
-                    TimeSpan totalDuration = m_endTime - m_startTime;
-                    
-                    // 현재 위치 계산
-                    TimeSpan currentPosition = currentTime - m_startTime;
-
-                    // 시간 표시 업데이트 (슬라이더 안정화 시간 중이더라도 시간은 항상 업데이트)
-                    PlayTimeText.Text = currentTime.ToString("HH:mm:ss");
-                    
-                    // 슬라이더 위치 업데이트 (진행률 계산)
-                    if (totalDuration.TotalSeconds > 0 && !skipSliderUpdate)
+                    // API 실패 시 로그 생성 빈도 제한 (매번 로그 생성하지 않음)
+                    if (currentTimeMs % 5000 < 1000) // 5초마다 한 번만 로그
                     {
-                        double progressPercent = (currentPosition.TotalSeconds / totalDuration.TotalSeconds) * 100;
-                        
-                        // 값이 유효한지 확인 (0-100 범위)
-                        if (progressPercent >= 0 && progressPercent <= 100)
+                        uint errorCode = Models.CCTV.NET_DVR_GetLastError();
+                        LogError($"재생 시간 가져오기 실패: 오류 코드 {errorCode} - {GetErrorMessage(errorCode)}");
+                    }
+                    return;
+                }
+
+                // 재생 시간 구성 (한 번만 계산)
+                DateTime currentTime = new DateTime((int)osdTime.dwYear, (int)osdTime.dwMonth, (int)osdTime.dwDay,
+                    (int)osdTime.dwHour, (int)osdTime.dwMinute, (int)osdTime.dwSecond);
+
+                // 총 재생 기간 계산 (캐시된 값 사용)
+                TimeSpan totalDuration = m_endTime - m_startTime;
+                TimeSpan currentPosition = currentTime - m_startTime;
+
+                // UI 업데이트 최적화: 시간 텍스트는 항상 업데이트하되, 변경이 있을 때만
+                string newTimeText = currentTime.ToString("HH:mm:ss");
+                if (PlayTimeText.Text != newTimeText)
+                {
+                    PlayTimeText.Text = newTimeText;
+                }
+                
+                // 슬라이더 위치 업데이트 (조건부 및 최적화)
+                if (totalDuration.TotalSeconds > 0 && !skipSliderUpdate)
+                {
+                    double progressPercent = (currentPosition.TotalSeconds / totalDuration.TotalSeconds) * 100;
+                    
+                    // 유효한 범위 확인 및 변화량 체크 (미세한 변화는 무시)
+                    if (progressPercent >= 0 && progressPercent <= 100)
+                    {
+                        // 이전 값과 차이가 0.1% 이상일 때만 업데이트 (UI 깜빡임 방지)
+                        if (Math.Abs(ProgressSlider.Value - progressPercent) >= 0.1)
                         {
-                            // 슬라이더 안정화 시간이 지났을 때만 위치 업데이트
                             ProgressSlider.Value = progressPercent;
-                            
-                            // 디버그용 로그 (슬라이더 위치가 급격히 변하는지 확인)
-                            if (currentTimeMs - lastSliderChangeTime < SLIDER_STABILIZE_TIME + 1000)
-                                LogError($"슬라이더 안정화 시간 이후 진행률 업데이트: {progressPercent:F2}%");
-                        }
-                        else
-                        {
-                            LogError($"잘못된 진행률 값: {progressPercent}%, 현재 시간: {currentTime}, 시작: {m_startTime}, 종료: {m_endTime}");
                         }
                     }
-                    else if (skipSliderUpdate && currentTimeMs - lastSliderChangeTime < SLIDER_STABILIZE_TIME + 1000)
+                    else if (currentTimeMs % 10000 < 1000) // 10초마다 한 번만 로그
                     {
-                        LogError($"슬라이더 안정화 시간({SLIDER_STABILIZE_TIME}ms)내 - 위치 업데이트 건너뜀, 경과: {currentTimeMs - lastSliderChangeTime}ms");
-                    }
-                    
-                    // 재생이 끝에 도달했는지 확인
-                    if (currentTime >= m_endTime || currentPosition.TotalSeconds >= totalDuration.TotalSeconds)
-                    {
-                        LogError("재생 끝에 도달함");
-                        StopPlayback();
-                        StatusText.Text = "재생 완료";
+                        LogError($"잘못된 진행률 값: {progressPercent:F2}%, 현재 시간: {currentTime}, 시작: {m_startTime}, 종료: {m_endTime}");
                     }
                 }
-                else
+                
+                // 재생 완료 확인 (종료 조건 최적화)
+                if (currentTime >= m_endTime || currentPosition.TotalSeconds >= totalDuration.TotalSeconds)
                 {
-                    uint errorCode = Models.CCTV.NET_DVR_GetLastError();
-                    LogError($"재생 시간 가져오기 실패: 오류 코드 {errorCode} - {GetErrorMessage(errorCode)}");
+                    LogError("재생 끝에 도달함");
+                    StopPlayback();
+                    PlayTimeText.Text = m_endTime.ToString("HH:mm:ss");
+                    
+                    // UI 스레드에서 상태 업데이트
+                    this.Dispatcher.BeginInvoke(() => StatusText.Text = "재생 완료", 
+                        System.Windows.Threading.DispatcherPriority.Normal);
                 }
             }
             catch (Exception ex)
             {
-                LogError($"재생 시간 업데이트 오류: {ex.Message}");
+                // 예외 로그 빈도 제한
+                if (Environment.TickCount % 5000 < 1000) // 5초마다 한 번만 로그
+                {
+                    LogError($"재생 시간 업데이트 오류: {ex.Message}");
+                }
             }
         }
 
@@ -2408,6 +2419,183 @@ namespace CCTV.Views
             catch (Exception ex)
             {
                 LogError($"RecordingVideoWindow 표시 처리 오류: {ex.Message}");
+            }
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!_disposed)
+            {
+                if (disposing)
+                {
+                    // 관리되는 리소스 해제
+                    try
+                    {
+                        LogError("RecordingPlayerWindow Dispose 시작");
+                        
+                        // 진행률 타이머 정리
+                        if (progressTimer != null)
+                        {
+                            progressTimer.Stop();
+                            progressTimer.Tick -= ProgressTimer_Tick;
+                            progressTimer = null;
+                            LogError("진행률 타이머 정리 완료");
+                        }
+                        
+                        // 상태 리셋 타이머 정리
+                        if (statusResetTimer != null)
+                        {
+                            statusResetTimer.Stop();
+                            statusResetTimer = null;
+                            LogError("상태 리셋 타이머 정리 완료");
+                        }
+                        
+                        // 재생 중지
+                        StopPlayback();
+                        
+                        // NVR 로그아웃
+                        if (m_lUserID >= 0)
+                        {
+                            Models.CCTV.NET_DVR_Logout(m_lUserID);
+                            m_lUserID = -1;
+                            LogError("NVR 로그아웃 완료");
+                        }
+                        
+                        // SDK 정리
+                        if (m_bInitSDK)
+                        {
+                            Models.CCTV.NET_DVR_Cleanup();
+                            m_bInitSDK = false;
+                            LogError("SDK 정리 완료");
+                        }
+                        
+                        // 비디오 윈도우 정리
+                        if (_videoWindow != null)
+                        {
+                            _videoWindow.Close();
+                            _videoWindow = null;
+                            LogError("비디오 윈도우 정리 완료");
+                        }
+                        
+                        // Owner 이벤트 핸들러 해제
+                        if (this.Owner != null)
+                        {
+                            this.Owner.LocationChanged -= Owner_LocationChanged;
+                            this.Owner.SizeChanged -= Owner_SizeChanged;
+                            this.Owner.StateChanged -= Owner_StateChanged;
+                            LogError("Owner 이벤트 핸들러 해제 완료");
+                        }
+                        
+                        LogError("RecordingPlayerWindow Dispose 완료");
+                    }
+                    catch (Exception ex)
+                    {
+                        LogError($"RecordingPlayerWindow Dispose 중 오류: {ex.Message}");
+                    }
+                }
+
+                // 관리되지 않는 리소스 해제
+                _disposed = true;
+            }
+        }
+
+        // 녹화재생 일시정지 메서드 (화면 전환 최적화용)
+        public void PausePlayback()
+        {
+            try
+            {
+                if (m_lPlayHandle >= 0 && isPlaying)
+                {
+                    LogError("녹화재생 일시정지 시작 (화면 전환)");
+                    
+                    uint dwOutValue = 0;
+                    if (Models.CCTV.NET_DVR_PlayBackControl(m_lPlayHandle, NET_DVR_PLAYPAUSE, 0, ref dwOutValue))
+                    {
+                        isPlaying = false;
+                        
+                        // 진행률 타이머 중지
+                        if (progressTimer != null)
+                        {
+                            progressTimer.Stop();
+                            isTimerActive = false;
+                        }
+                        
+                        // UI 상태 업데이트
+                        this.Dispatcher.BeginInvoke(() =>
+                        {
+                            StatusText.Text = "일시 정지 (화면 전환)";
+                            PlayButton.IsEnabled = true;
+                            PauseButton.IsEnabled = false;
+                        }, System.Windows.Threading.DispatcherPriority.Normal);
+                        
+                        LogError("녹화재생 일시정지 완료 (화면 전환)");
+                    }
+                    else
+                    {
+                        uint errorCode = Models.CCTV.NET_DVR_GetLastError();
+                        LogError($"녹화재생 일시정지 실패: 오류 코드 {errorCode}");
+                    }
+                }
+                else
+                {
+                    LogError("녹화재생 일시정지 건너뜀: 재생 중이 아님");
+                }
+            }
+            catch (Exception ex)
+            {
+                LogError($"녹화재생 일시정지 오류: {ex.Message}");
+            }
+        }
+        
+        // 녹화재생 재개 메서드 (화면 전환 최적화용)
+        public void ResumePlayback()
+        {
+            try
+            {
+                if (m_lPlayHandle >= 0 && !isPlaying)
+                {
+                    LogError("녹화재생 재개 시작 (화면 전환)");
+                    
+                    uint dwOutValue = 0;
+                    if (Models.CCTV.NET_DVR_PlayBackControl(m_lPlayHandle, NET_DVR_PLAYRESTART, 0, ref dwOutValue))
+                    {
+                        isPlaying = true;
+                        
+                        // 진행률 타이머 재시작
+                        if (progressTimer != null)
+                        {
+                            progressTimer.Start();
+                            isTimerActive = true;
+                        }
+                        
+                        // UI 상태 업데이트
+                        this.Dispatcher.BeginInvoke(() =>
+                        {
+                            StatusText.Text = "녹화 영상 재생 중";
+                            PlayButton.IsEnabled = false;
+                            PauseButton.IsEnabled = true;
+                        }, System.Windows.Threading.DispatcherPriority.Normal);
+                        
+                        LogError("녹화재생 재개 완료 (화면 전환)");
+                    }
+                    else
+                    {
+                        uint errorCode = Models.CCTV.NET_DVR_GetLastError();
+                        LogError($"녹화재생 재개 실패: 오류 코드 {errorCode}");
+                    }
+                }
+                else if (m_lPlayHandle < 0)
+                {
+                    LogError("녹화재생 재개 건너뜀: 재생 핸들이 없음");
+                }
+                else
+                {
+                    LogError("녹화재생 재개 건너뜀: 이미 재생 중");
+                }
+            }
+            catch (Exception ex)
+            {
+                LogError($"녹화재생 재개 오류: {ex.Message}");
             }
         }
     }

@@ -378,43 +378,97 @@ public partial class MainWindow : Window
     // CCTV 화면 표시
     private void ShowCCTVView()
     {
-        if (_cctvWindow != null)
+        try
         {
-            _cctvWindow.Show();
-            PositionFullScreenWindow(_cctvWindow);
-        }
-        
-        if (_recordingPlayerWindow != null)
-        {
-            System.Diagnostics.Debug.WriteLine($"ShowCCTVView: RecordingPlayerWindow 숨김 시도 - IsVisible: {_recordingPlayerWindow.IsVisible}");
-            _recordingPlayerWindow.Hide();
-            _recordingPlayerWindow.HideVideoWindow(); // RecordingVideoWindow도 함께 숨김
+            System.Diagnostics.Debug.WriteLine("=== ShowCCTVView 시작 ===");
             
-            // 강제로 Visibility 설정
-            _recordingPlayerWindow.Visibility = Visibility.Hidden;
-            System.Diagnostics.Debug.WriteLine($"ShowCCTVView: RecordingPlayerWindow 강제 숨김 완료 - IsVisible: {_recordingPlayerWindow.IsVisible}, Visibility: {_recordingPlayerWindow.Visibility}");
+            // 1. RecordingPlayerWindow 일시정지 및 숨김
+            if (_recordingPlayerWindow != null)
+            {
+                System.Diagnostics.Debug.WriteLine("RecordingPlayerWindow 일시정지 및 숨김 처리");
+                
+                // 녹화재생 일시정지 (리소스 절약)
+                _recordingPlayerWindow.PausePlayback();
+                
+                // 화면 숨김
+                _recordingPlayerWindow.Hide();
+                _recordingPlayerWindow.HideVideoWindow();
+                _recordingPlayerWindow.Visibility = Visibility.Hidden;
+                
+                System.Diagnostics.Debug.WriteLine("RecordingPlayerWindow 일시정지 및 숨김 완료");
+            }
+            
+            // 2. CCTV 화면 표시 및 재개
+            if (_cctvWindow != null)
+            {
+                System.Diagnostics.Debug.WriteLine("CCTV 화면 표시 및 재개 처리");
+                
+                _cctvWindow.Show();
+                PositionFullScreenWindow(_cctvWindow);
+                
+                // CCTV 스트림 재개 (일시정지된 경우)
+                if (_cctvViewModel != null && _cctvViewModel.IsConnected)
+                {
+                    _cctvViewModel.ResumeStream();
+                    System.Diagnostics.Debug.WriteLine("CCTV 스트림 재개됨");
+                }
+            }
+            
+            System.Diagnostics.Debug.WriteLine("=== ShowCCTVView 완료 ===");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"ShowCCTVView 오류: {ex.Message}");
+            UpdateStatus($"CCTV 화면 전환 오류: {ex.Message}");
         }
     }
     
     // 녹화영상 화면 표시
     private void ShowRecordingView()
     {
-        if (_recordingPlayerWindow != null)
+        try
         {
-            System.Diagnostics.Debug.WriteLine($"ShowRecordingView: RecordingPlayerWindow 표시 시도 - IsVisible: {_recordingPlayerWindow.IsVisible}");
+            System.Diagnostics.Debug.WriteLine("=== ShowRecordingView 시작 ===");
             
-            // 강제로 Visibility 설정
-            _recordingPlayerWindow.Visibility = Visibility.Visible;
-            _recordingPlayerWindow.Show();
-            PositionFullScreenWindow(_recordingPlayerWindow);
-            _recordingPlayerWindow.ShowVideoWindow(); // RecordingVideoWindow도 함께 표시
+            // 1. CCTV 스트림 일시정지 및 숨김
+            if (_cctvWindow != null)
+            {
+                System.Diagnostics.Debug.WriteLine("CCTV 스트림 일시정지 및 숨김 처리");
+                
+                // CCTV 스트림 일시정지 (리소스 절약)
+                if (_cctvViewModel != null && _cctvViewModel.IsConnected)
+                {
+                    _cctvViewModel.PauseStream();
+                    System.Diagnostics.Debug.WriteLine("CCTV 스트림 일시정지됨");
+                }
+                
+                // 화면 숨김
+                _cctvWindow.Hide();
+            }
             
-            System.Diagnostics.Debug.WriteLine($"ShowRecordingView: RecordingPlayerWindow 표시 완료 - IsVisible: {_recordingPlayerWindow.IsVisible}, Visibility: {_recordingPlayerWindow.Visibility}");
+            // 2. RecordingPlayerWindow 표시 및 재개
+            if (_recordingPlayerWindow != null)
+            {
+                System.Diagnostics.Debug.WriteLine("RecordingPlayerWindow 표시 및 재개 처리");
+                
+                // 화면 표시
+                _recordingPlayerWindow.Visibility = Visibility.Visible;
+                _recordingPlayerWindow.Show();
+                PositionFullScreenWindow(_recordingPlayerWindow);
+                _recordingPlayerWindow.ShowVideoWindow();
+                
+                // 녹화재생 재개 (일시정지된 경우)
+                _recordingPlayerWindow.ResumePlayback();
+                
+                System.Diagnostics.Debug.WriteLine("RecordingPlayerWindow 표시 및 재개 완료");
+            }
+            
+            System.Diagnostics.Debug.WriteLine("=== ShowRecordingView 완료 ===");
         }
-        
-        if (_cctvWindow != null)
+        catch (Exception ex)
         {
-            _cctvWindow.Hide();
+            System.Diagnostics.Debug.WriteLine($"ShowRecordingView 오류: {ex.Message}");
+            UpdateStatus($"녹화영상 화면 전환 오류: {ex.Message}");
         }
     }
     
@@ -512,37 +566,78 @@ public partial class MainWindow : Window
     {
         try
         {
+            System.Diagnostics.Debug.WriteLine("MainWindow OnClosed 시작");
+            
+            // 비활성화 타이머 정리
+            if (_deactivationTimer != null)
+            {
+                _deactivationTimer.Stop();
+                _deactivationTimer = null;
+                System.Diagnostics.Debug.WriteLine("비활성화 타이머 정리 완료");
+            }
+            
             // CCTV ViewModel 정리
             if (_cctvViewModel != null)
             {
                 _cctvViewModel.Dispose();
                 _cctvViewModel = null;
+                System.Diagnostics.Debug.WriteLine("CCTV ViewModel 정리 완료");
             }
             
-            // CCTV 윈도우 닫기
+            // 자식 윈도우들 정리
             if (_cctvWindow != null)
             {
-                _cctvWindow.Close();
+                // 이벤트 핸들러 해제
+                this.LocationChanged -= MainWindow_LocationChanged;
+                this.SizeChanged -= MainWindow_SizeChanged;
+                this.StateChanged -= MainWindow_StateChanged;
+                this.Activated -= MainWindow_Activated;
+                this.Deactivated -= MainWindow_Deactivated;
+                
+                // 윈도우 종료
+                try
+                {
+                    _cctvWindow.Close();
+                }
+                catch (InvalidOperationException)
+                {
+                    // 이미 닫혀진 윈도우일 경우 무시
+                }
                 _cctvWindow = null;
+                System.Diagnostics.Debug.WriteLine("CCTV 윈도우 정리 완료");
             }
             
-            // 녹화영상 윈도우 닫기
             if (_recordingPlayerWindow != null)
             {
-                _recordingPlayerWindow.Close();
+                // RecordingPlayerWindow의 Dispose 호출
+                if (_recordingPlayerWindow is IDisposable disposableWindow)
+                {
+                    disposableWindow.Dispose();
+                }
+                
+                try
+                {
+                    _recordingPlayerWindow.Close();
+                }
+                catch (InvalidOperationException)
+                {
+                    // 이미 닫혀진 윈도우일 경우 무시
+                }
                 _recordingPlayerWindow = null;
+                System.Diagnostics.Debug.WriteLine("RecordingPlayer 윈도우 정리 완료");
             }
             
-            // 타이머 정리
-            if (_deactivationTimer != null)
-            {
-                _deactivationTimer.Stop();
-                _deactivationTimer = null;
-            }
+            // 강제 가비지 컬렉션 (개발/테스트 용도)
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+            
+            System.Diagnostics.Debug.WriteLine("MainWindow OnClosed 완료");
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"리소스 정리 오류: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"MainWindow 종료 중 오류: {ex.Message}");
+            // 종료 중 예외는 로깅만 하고 계속 진행
         }
         finally
         {
@@ -795,67 +890,82 @@ public partial class MainWindow : Window
     {
         try
         {
-            System.Diagnostics.Debug.WriteLine("MainWindow 비활성화됨");
-            
-            // 잠시 후에 확인하여 실제로 다른 애플리케이션으로 포커스가 이동했는지 체크
-            this.Dispatcher.BeginInvoke(new Action(() =>
+            // 이미 타이머가 실행 중이면 중복 실행 방지
+            if (_deactivationTimer != null && _deactivationTimer.IsEnabled)
             {
-                try
+                _deactivationTimer.Stop();
+            }
+            
+            // 새 타이머 생성 (기존 타이머 재사용)
+            if (_deactivationTimer == null)
+            {
+                _deactivationTimer = new System.Windows.Threading.DispatcherTimer
                 {
-                    // 현재 애플리케이션의 윈도우 중 하나가 여전히 활성화되어 있는지 확인
-                    bool anyAppWindowActive = false;
-                    
-                    foreach (Window window in Application.Current.Windows)
-                    {
-                        if (window.IsActive)
-                        {
-                            anyAppWindowActive = true;
-                            System.Diagnostics.Debug.WriteLine($"애플리케이션 내 활성 윈도우 발견: {window.GetType().Name}");
-                            break;
-                        }
-                    }
-                    
-                    // 애플리케이션의 어떤 윈도우도 활성화되어 있지 않으면 다른 프로그램으로 포커스 이동
-                    if (!anyAppWindowActive)
-                    {
-                        System.Diagnostics.Debug.WriteLine("다른 프로그램으로 포커스 이동 - 자식 윈도우들 숨김");
-                        
-                        // 메인 윈도우가 비활성화될 때 모든 자식 윈도우 숨김
-                        if (_cctvWindow != null)
-                        {
-                            System.Diagnostics.Debug.WriteLine($"CCTVWindow 숨김 시도 - IsVisible: {_cctvWindow.IsVisible}");
-                            _cctvWindow.Hide();
-                            System.Diagnostics.Debug.WriteLine($"CCTVWindow 숨김 완료 - IsVisible: {_cctvWindow.IsVisible}");
-                        }
-                        
-                        if (_recordingPlayerWindow != null)
-                        {
-                            System.Diagnostics.Debug.WriteLine($"RecordingPlayerWindow 숨김 시도 - IsVisible: {_recordingPlayerWindow.IsVisible}");
-                            _recordingPlayerWindow.Hide();
-                            System.Diagnostics.Debug.WriteLine($"RecordingPlayerWindow 숨김 후 - IsVisible: {_recordingPlayerWindow.IsVisible}");
-                            
-                            _recordingPlayerWindow.HideVideoWindow(); // RecordingVideoWindow도 함께 숨김
-                            System.Diagnostics.Debug.WriteLine("RecordingVideoWindow 숨김 완료");
-                            
-                            // 강제로 Visibility 설정
-                            _recordingPlayerWindow.Visibility = Visibility.Hidden;
-                            System.Diagnostics.Debug.WriteLine($"RecordingPlayerWindow 강제 숨김 후 - Visibility: {_recordingPlayerWindow.Visibility}");
-                        }
-                    }
-                    else
-                    {
-                        System.Diagnostics.Debug.WriteLine("애플리케이션 내 윈도우 간 포커스 이동 - 자식 윈도우 유지");
-                    }
-                }
-                catch (Exception ex)
+                    Interval = TimeSpan.FromMilliseconds(100) // 100ms로 단축하여 응답성 향상
+                };
+                _deactivationTimer.Tick += (timerSender, timerE) =>
                 {
-                    System.Diagnostics.Debug.WriteLine($"지연된 비활성화 처리 오류: {ex.Message}");
-                }
-            }), System.Windows.Threading.DispatcherPriority.Background);
+                    try
+                    {
+                        _deactivationTimer.Stop();
+                        
+                        // 효율적인 윈도우 검사 - 캐시된 결과 사용
+                        bool isAppWindowActive = false;
+                        
+                        // 메인 윈도우 활성화 상태 체크
+                        if (this.IsActive)
+                        {
+                            isAppWindowActive = true;
+                        }
+                        else
+                        {
+                            // 자식 윈도우들만 체크 (전체 윈도우 순회 대신)
+                            if (_cctvWindow?.IsActive == true || _recordingPlayerWindow?.IsActive == true)
+                            {
+                                isAppWindowActive = true;
+                            }
+                        }
+                        
+                        System.Diagnostics.Debug.WriteLine($"비활성화 체크: isAppWindowActive={isAppWindowActive}");
+                        
+                        if (!isAppWindowActive)
+                        {
+                            // 애플리케이션이 완전히 비활성화됨 - 자식 윈도우들 숨김
+                            System.Diagnostics.Debug.WriteLine("애플리케이션 완전 비활성화 - 자식 윈도우 숨김");
+                            
+                            // CCTV 윈도우 숨김
+                            if (_cctvWindow != null && _cctvWindow.IsVisible)
+                            {
+                                _cctvWindow.Hide();
+                                System.Diagnostics.Debug.WriteLine("CCTV 윈도우 숨김");
+                            }
+                            
+                            // RecordingPlayer 윈도우 숨김
+                            if (_recordingPlayerWindow != null && _recordingPlayerWindow.IsVisible)
+                            {
+                                _recordingPlayerWindow.Hide();
+                                System.Diagnostics.Debug.WriteLine("RecordingPlayer 윈도우 숨김");
+                                
+                                // RecordingVideoWindow도 강제 숨김
+                                _recordingPlayerWindow.HideVideoWindow();
+                            }
+                        }
+                    }
+                    catch (Exception timerEx)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"비활성화 타이머 오류: {timerEx.Message}");
+                    }
+                };
+            }
+            
+            // 타이머 시작
+            _deactivationTimer.Start();
+            
+            System.Diagnostics.Debug.WriteLine("MainWindow_Deactivated: 지연된 체크 타이머 시작됨 (100ms)");
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"MainWindow 비활성화 처리 오류: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"MainWindow_Deactivated 오류: {ex.Message}");
         }
     }
 }

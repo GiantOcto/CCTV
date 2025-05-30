@@ -10,6 +10,7 @@ using System.Runtime.InteropServices;
 using CCTV.Views;
 using System.Windows.Threading;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace CCTV.ViewModels
 {
@@ -105,47 +106,71 @@ namespace CCTV.ViewModels
         }
         
         [RelayCommand]
-        private void Connect()
+        private async Task Connect()
         {
             try
             {
+                // UI 상태 즉시 업데이트
+                StatusMessage = "연결 중...";
+                
                 // 이미 연결된 경우 먼저 해제
                 if (m_lUserID >= 0)
                 {
-                    Disconnect();
+                    await Task.Run(() => Disconnect());
                 }
-                string ip = "192.168.100.4";
-                string username = "admin";
-                string password = "!yanry3734";
-                ushort port = 8000;
 
-                // 로그인 구조체 설정
-                Models.CCTV.NET_DVR_DEVICEINFO_V30 deviceInfo = new Models.CCTV.NET_DVR_DEVICEINFO_V30();
-                
-                // 로그인
-                m_lUserID = Models.CCTV.NET_DVR_Login_V30(ip, port, username, password, ref deviceInfo);
-                if (m_lUserID < 0)
+                // 연결 작업을 백그라운드에서 실행
+                await Task.Run(() =>
                 {
-                    uint errorCode = Models.CCTV.NET_DVR_GetLastError();
-                    StatusMessage = $"로그인 실패: 오류 코드 {errorCode}";
-                    IsConnected = false;
-                    return;
+                    string ip = "192.168.100.4";
+                    string username = "admin";
+                    string password = "!yanry3734";
+                    ushort port = 8000;
+
+                    // 로그인 구조체 설정
+                    Models.CCTV.NET_DVR_DEVICEINFO_V30 deviceInfo = new Models.CCTV.NET_DVR_DEVICEINFO_V30();
+                    
+                    // 로그인
+                    m_lUserID = Models.CCTV.NET_DVR_Login_V30(ip, port, username, password, ref deviceInfo);
+                    if (m_lUserID < 0)
+                    {
+                        uint errorCode = Models.CCTV.NET_DVR_GetLastError();
+                        
+                        // UI 스레드에서 상태 메시지 업데이트
+                        Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            StatusMessage = $"로그인 실패: 오류 코드 {errorCode}";
+                            IsConnected = false;
+                        });
+                        return;
+                    }
+                    
+                    // UI 스레드에서 성공 상태 업데이트
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        StatusMessage = "NVR 로그인 성공";
+                        IsConnected = true;
+                    });
+                });
+                
+                // 연결 성공 시 추가 작업
+                if (IsConnected)
+                {
+                    // 실시간 비디오 스트림 시작 (백그라운드에서)
+                    await Task.Run(() => StartRealPlay());
+                    
+                    // 알람 채널 설정 (백그라운드에서)
+                    await Task.Run(() =>
+                    {
+                        SetupAlarmChan();
+                        LogMessage($"알람 채널 설정 - 채널: {channelNumber}");
+                    });
                 }
-                
-                // 로그인 성공
-                StatusMessage = "NVR 로그인 성공";
-                IsConnected = true;
-                
-                // 실시간 비디오 스트림 시작
-                StartRealPlay();
-                
-                // 알람 채널 설정 추가
-                SetupAlarmChan();
-                LogMessage($"알람 채널 설정 - 채널: {channelNumber}");
             }
             catch (Exception ex)
             {
                 StatusMessage = $"연결 오류: {ex.Message}";
+                LogError($"비동기 연결 오류: {ex.Message}");
             }
         }
         
@@ -386,18 +411,49 @@ namespace CCTV.ViewModels
         {
             try
             {
-                // 모든 리소스 정리
-                Disconnect();
+                LogMessage("CCTVViewModel Dispose 시작");
                 
-                // SDK 종료
+                // 인트루전 체크 타이머 정리
+                if (_intrusionCheckTimer != null)
+                {
+                    _intrusionCheckTimer.Stop();
+                    _intrusionCheckTimer.Tick -= IntrusionCheckTimer_Tick;
+                    _intrusionCheckTimer = null;
+                    LogMessage("인트루전 체크 타이머 정리 완료");
+                }
+                
+                // 알람 채널 해제
+                if (m_lAlarmHandle >= 0)
+                {
+                    Models.CCTV.NET_DVR_CloseAlarmChan_V30(m_lAlarmHandle);
+                    m_lAlarmHandle = -1;
+                    LogMessage("알람 채널 해제 완료");
+                }
+                
+                // 모든 스트림 중지
+                StopAllStreams();
+                
+                // 로그아웃
+                if (m_lUserID >= 0)
+                {
+                    Models.CCTV.NET_DVR_Logout(m_lUserID);
+                    m_lUserID = -1;
+                    LogMessage("NVR 로그아웃 완료");
+                }
+                
+                // SDK 정리
                 if (m_bInitSDK)
                 {
                     Models.CCTV.NET_DVR_Cleanup();
+                    m_bInitSDK = false;
+                    LogMessage("SDK 정리 완료");
                 }
+                
+                LogMessage("CCTVViewModel Dispose 완료");
             }
-            catch
+            catch (Exception ex)
             {
-                // 정리 중 오류 발생시 무시
+                LogError($"CCTVViewModel Dispose 중 오류: {ex.Message}");
             }
         }
 
@@ -671,7 +727,7 @@ namespace CCTV.ViewModels
 
         public void PanLeft()
         {
-            if (!isConnected || m_lUserID < 0)
+            if (!IsConnected || m_lUserID < 0)
             {
                 return;
             }
@@ -692,7 +748,7 @@ namespace CCTV.ViewModels
 
         public void PanRight()
         {
-            if (!isConnected || m_lUserID < 0)
+            if (!IsConnected || m_lUserID < 0)
             {
                 return;
             }
@@ -713,7 +769,7 @@ namespace CCTV.ViewModels
 
         public void TiltUp()
         {
-            if (!isConnected || m_lUserID < 0)
+            if (!IsConnected || m_lUserID < 0)
             {
                 return;
             }
@@ -735,7 +791,7 @@ namespace CCTV.ViewModels
 
         public void TiltDown()
         {
-            if (!isConnected || m_lUserID < 0)
+            if (!IsConnected || m_lUserID < 0)
             {
                 return;
             }
@@ -757,7 +813,7 @@ namespace CCTV.ViewModels
         // 줌 관련 메서드
         public void ZoomIn()
         {
-            if (!isConnected || m_lUserID < 0)
+            if (!IsConnected || m_lUserID < 0)
             {
                 return;
             }
@@ -776,7 +832,7 @@ namespace CCTV.ViewModels
 
         public void ZoomOut()
         {
-            if (!isConnected || m_lUserID < 0)
+            if (!IsConnected || m_lUserID < 0)
             {
                 return;
             }
@@ -797,7 +853,7 @@ namespace CCTV.ViewModels
         // PTZ 미리 설정 위치 호출 메서드 추가
         public void GoToPreset(int presetIndex)
         {
-            if (!isConnected || m_lUserID < 0) return;
+            if (!IsConnected || m_lUserID < 0) return;
             
             try
             {
@@ -853,6 +909,74 @@ namespace CCTV.ViewModels
             catch (Exception ex)
             {
                 LogError($"StopAllStreams 오류: {ex.Message}");
+            }
+        }
+
+        // 스트림 일시정지 메서드 (화면 전환 최적화용)
+        public void PauseStream()
+        {
+            try
+            {
+                if (m_lUserID >= 0 && m_lRealHandles.Count > 0)
+                {
+                    LogMessage("CCTV 스트림 일시정지 시작");
+                    
+                    // 모든 활성 스트림을 일시정지
+                    foreach (var handle in m_lRealHandles.ToList())
+                    {
+                        if (handle.Value >= 0)
+                        {
+                            // 실시간 재생 중지 (완전 중지가 아닌 일시정지)
+                            bool result = Models.CCTV.NET_DVR_StopRealPlay(handle.Value);
+                            LogMessage($"스트림 일시정지: 채널 {handle.Key}, 핸들 {handle.Value}, 결과: {result}");
+                        }
+                    }
+                    
+                    // 핸들은 유지하되 상태만 기록
+                    StatusMessage = "CCTV 스트림 일시정지됨 (화면 전환)";
+                    LogMessage("CCTV 스트림 일시정지 완료");
+                }
+            }
+            catch (Exception ex)
+            {
+                LogError($"CCTV 스트림 일시정지 오류: {ex.Message}");
+            }
+        }
+        
+        // 스트림 재개 메서드 (화면 전환 최적화용)
+        public void ResumeStream()
+        {
+            try
+            {
+                if (m_lUserID >= 0 && IsConnected)
+                {
+                    LogMessage("CCTV 스트림 재개 시작");
+                    
+                    // 현재 채널의 스트림이 중지되어 있으면 재시작
+                    if (!m_lRealHandles.ContainsKey(channelNumber) || m_lRealHandles[channelNumber] < 0)
+                    {
+                        LogMessage($"채널 {channelNumber} 스트림 재시작 필요");
+                        
+                        // 기존 방식으로 스트림 재시작
+                        StartRealPlay();
+                        
+                        StatusMessage = $"CCTV 스트림 재개됨 - 채널 {channelNumber}";
+                        LogMessage("CCTV 스트림 재개 완료");
+                    }
+                    else
+                    {
+                        LogMessage($"채널 {channelNumber} 스트림이 이미 활성 상태");
+                        StatusMessage = $"CCTV 스트림 활성 - 채널 {channelNumber}";
+                    }
+                }
+                else
+                {
+                    LogMessage("CCTV 스트림 재개 실패: 연결되지 않음");
+                }
+            }
+            catch (Exception ex)
+            {
+                LogError($"CCTV 스트림 재개 오류: {ex.Message}");
             }
         }
     }
