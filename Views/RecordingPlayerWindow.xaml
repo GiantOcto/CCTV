@@ -239,7 +239,7 @@
 
             <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
                 <TextBlock Text="채널:" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="Black"/>
-                <ComboBox x:Name="ChannelComboBox" Width="80" SelectedIndex="0" Margin="0,0,10,0" Foreground="Black" Background="White" BorderBrush="#AAAAAA">
+                <ComboBox x:Name="ChannelComboBox" Width="80" SelectedIndex="0" Margin="0,0,10,0" Foreground="Black" Background="White" BorderBrush="#AAAAAA" Height="24">
 
                     <!-- 콤보박스 아이템에 대한 스타일 정의 -->
                     <ComboBox.ItemContainerStyle>

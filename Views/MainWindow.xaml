@@ -213,7 +213,7 @@
 
         <!-- 우측 제어 영역 (PTZ + 기존 좌측 제어 통합) -->
         <Border Grid.Column="1" Grid.Row="0" Background="#292F44" BorderBrush="#FF4C566A" BorderThickness="1,0,0,0">
-            <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <ScrollViewer VerticalScrollBarVisibility="Hidden">
                 <StackPanel Margin="10">
 
                     <!-- PTZ 제어 섹션 -->
