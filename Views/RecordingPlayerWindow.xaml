@@ -5,6 +5,7 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
     xmlns:local="clr-namespace:CCTV.Views"
+    xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
     xmlns:sys="clr-namespace:System;assembly=mscorlib" mc:Ignorable="d" Title="녹화 영상 재생" Height="650" Width="900" WindowStartupLocation="CenterScreen" Background="#F0F0F0" TextElement.Foreground="Black" Loaded="RecordingPlayerWindow_Loaded">
     <Window.Resources>
         <!-- 미래 날짜를 회색으로 표시하기 위한 스타일 -->
@@ -14,7 +15,7 @@
             <Setter Property="Opacity" Value="0.5"/>
             <Setter Property="Cursor" Value="No"/>
         </Style>
-        
+
         <!-- 캘린더 날짜 버튼 스타일 -->
         <Style x:Key="WhiteCalendarDayButtonStyle" TargetType="{x:Type CalendarDayButton}">
             <Setter Property="Background" Value="White"/>
@@ -57,7 +58,7 @@
                 </DataTrigger>
             </Style.Triggers>
         </Style>
-        
+
         <!-- 캘린더 버튼 스타일 -->
         <Style x:Key="WhiteCalendarButtonStyle" TargetType="{x:Type CalendarButton}">
             <Setter Property="Background" Value="White"/>
@@ -100,8 +101,8 @@
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
-                                <Button x:Name="PART_Button" Grid.Column="1" Foreground="Black">
-                                    📅
+                                <Button x:Name="PART_Button" Grid.Column="1" Foreground="Black" Width="30" Height="25">
+                                    <materialDesign:PackIcon Kind="Calendar" Width="20" Height="20"/>
                                 </Button>
                                 <DatePickerTextBox x:Name="PART_TextBox" Grid.Column="0" Foreground="Black" Background="White" HorizontalContentAlignment="Left" VerticalContentAlignment="Center" Padding="5,0,0,0" />
                                 <Popup x:Name="PART_Popup" PlacementTarget="{Binding ElementName=PART_TextBox}" StaysOpen="False">
@@ -146,7 +147,7 @@
                 <TextBlock Text="종료:" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="Black"/>
                 <xctk:TimePicker x:Name="EndTimePicker" Width="100" Format="Custom" FormatString="HH:mm:ss" Value="23:59:59" Margin="0,0,10,0" Foreground="Black" ToolTip="시간을 입력하세요. 숫자만 입력하고 엔터를 누르면 자동으로 시간이 설정됩니다.&#x0a;예: 14 → 14:00:00, 1430 → 14:30:00, 143055 → 14:30:55" />
 
-                <Button x:Name="SearchButton" Content="검색" Width="80" Height="30" Click="SearchButton_Click" IsEnabled="False" Background="#007ACC" Foreground="White" Margin="5,0,0,0"/>
+                <Button x:Name="SearchButton" Content="검색" Width="80" Height="30" Click="SearchButton_Click" Background="#007ACC" Foreground="White" Margin="5,0,0,0"/>
             </StackPanel>
 
             <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="5">
@@ -225,21 +226,31 @@
             </Grid.ColumnDefinitions>
 
             <StackPanel Grid.Column="0" Orientation="Horizontal">
-                <Button x:Name="PlayButton" Width="50" Height="50" Margin="5" Padding="4" Click="PlayButton_Click" ToolTip="재생" IsEnabled="True" Background="#2196F3" Foreground="White" Content="▶"/>
+                <Button x:Name="PlayButton" Width="50" Height="50" Margin="5" Padding="4" Click="PlayButton_Click" ToolTip="재생" IsEnabled="True" Style="{StaticResource MaterialDesignRaisedButton}" Background="#2196F3">
+                    <materialDesign:PackIcon Kind="Play" Width="28" Height="28" />
+                </Button>
 
-                <Button x:Name="PauseButton" Width="50" Height="50" Margin="5" Padding="4" Click="PauseButton_Click" ToolTip="일시정지" IsEnabled="False" Background="#2196F3" Foreground="White" Content="⏸"/>
+                <Button x:Name="PauseButton" Width="50" Height="50" Margin="5" Padding="4" Click="PauseButton_Click" ToolTip="일시정지" IsEnabled="False" Style="{StaticResource MaterialDesignRaisedButton}" Background="#2196F3">
+                    <materialDesign:PackIcon Kind="Pause" Width="28" Height="28" />
+                </Button>
 
-                <Button x:Name="StopButton" Width="50" Height="50" Margin="5" Padding="4" Click="StopButton_Click" ToolTip="정지" IsEnabled="False" Background="#2196F3" Foreground="White" Content="⏹"/>
+                <Button x:Name="StopButton" Width="50" Height="50" Margin="5" Padding="4" Click="StopButton_Click" ToolTip="정지" IsEnabled="False" Style="{StaticResource MaterialDesignRaisedButton}" Background="#2196F3">
+                    <materialDesign:PackIcon Kind="Stop" Width="28" Height="28" />
+                </Button>
 
-                <Button x:Name="FastForwardButton" Width="50" Height="50" Margin="5" Padding="4" Click="FastForwardButton_Click" ToolTip="빨리 감기" IsEnabled="False" Background="#2196F3" Foreground="White" Content="⏩"/>
+                <Button x:Name="FastForwardButton" Width="50" Height="50" Margin="5" Padding="4" Click="FastForwardButton_Click" ToolTip="빨리 감기" IsEnabled="False" Style="{StaticResource MaterialDesignRaisedButton}" Background="#2196F3">
+                    <materialDesign:PackIcon Kind="FastForward" Width="28" Height="28" />
+                </Button>
 
-                <Button x:Name="SlowButton" Width="50" Height="50" Margin="5" Padding="4" Click="SlowButton_Click" ToolTip="느리게 재생" IsEnabled="False" Background="#2196F3" Foreground="White" Content="⏪"/>
+                <Button x:Name="SlowButton" Width="50" Height="50" Margin="5" Padding="4" Click="SlowButton_Click" ToolTip="느리게 재생" IsEnabled="False" Style="{StaticResource MaterialDesignRaisedButton}" Background="#2196F3">
+                    <materialDesign:PackIcon Kind="Rewind" Width="28" Height="28" />
+                </Button>
 
             </StackPanel>
 
             <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
                 <TextBlock Text="채널:" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="Black"/>
-                <ComboBox x:Name="ChannelComboBox" Width="80" SelectedIndex="0" Margin="0,0,10,0" Foreground="Black" Background="White" BorderBrush="#AAAAAA" Height="24">
+                <ComboBox x:Name="ChannelComboBox" Width="84" SelectedIndex="0" Margin="0,0,10,0" Foreground="Black" Background="White" BorderBrush="#AAAAAA" Height="24">
 
                     <!-- 콤보박스 아이템에 대한 스타일 정의 -->
                     <ComboBox.ItemContainerStyle>
