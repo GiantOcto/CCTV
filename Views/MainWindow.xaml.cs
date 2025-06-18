@@ -9,6 +9,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using System.Windows.Media.Animation;
 using CCTV.Views;
 using CCTV.ViewModels;
 
@@ -33,6 +34,16 @@ public partial class MainWindow : Window
     // 비활성화 감지용 타이머 추가
     private System.Windows.Threading.DispatcherTimer? _deactivationTimer;
 
+    // 스크롤 관련 필드 추가
+    private bool _isScrolling = false;
+    private Point _lastPosition;
+    private Point _lastMousePosition;
+    private bool _isMouseDown = false;
+    private System.Windows.Threading.DispatcherTimer _inertiaTimer;
+    private double _scrollVelocity = 0;
+    private const double DECELERATION_RATE = 0.90; // 감속률 (값이 클수록 더 오래 스크롤)
+    private const double VELOCITY_THRESHOLD = 0.5; // 스크롤 중지 임계값
+
     public MainWindow()
     {
         InitializeComponent();
@@ -42,6 +53,20 @@ public partial class MainWindow : Window
         // 윈도우 활성화/비활성화 이벤트 추가
         this.Activated += MainWindow_Activated;
         this.Deactivated += MainWindow_Deactivated;
+
+        // 스크롤 성능 향상을 위한 설정
+        RenderOptions.SetBitmapScalingMode(MainScrollViewer, BitmapScalingMode.LowQuality);
+        ScrollViewer.SetIsDeferredScrollingEnabled(MainScrollViewer, true);
+        
+        // 관성 스크롤 타이머 초기화
+        _inertiaTimer = new System.Windows.Threading.DispatcherTimer();
+        _inertiaTimer.Interval = TimeSpan.FromMilliseconds(16); // 약 60fps
+        _inertiaTimer.Tick += InertiaTimer_Tick;
+        
+        // 관성 스크롤링 활성화
+        MainScrollViewer.PanningMode = PanningMode.VerticalOnly;
+        MainScrollViewer.PanningDeceleration = 0.001; // 감속 값이 작을수록 더 긴 관성
+        MainScrollViewer.PanningRatio = 1.0; // 스크롤링 비율
     }
 
     private void InitializeChannelSelection()
@@ -209,11 +234,6 @@ public partial class MainWindow : Window
     
     private void UpdateChannelDisplay(int channelNumber)
     {
-        if (CurrentChannelText != null)
-        {
-            CurrentChannelText.Text = $"현재 채널: {channelNumber}";
-        }
-        
         // 해당 채널 버튼을 선택 상태로 만들기
         SetChannelButtonSelected(channelNumber);
     }
@@ -345,6 +365,77 @@ public partial class MainWindow : Window
         }
     }
 
+    // 앱 종료 이벤트 핸들러
+    private void ExitButton_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            Application.Current.Shutdown();
+        }
+        catch (Exception ex)
+        {
+            UpdateStatus($"앱 종료 오류: {ex.Message}");
+        }
+    }
+
+    // ESC 키로 앱 종료
+    private void Window_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Escape)
+        {
+            try
+            {
+                Application.Current.Shutdown();
+            }
+            catch (Exception ex)
+            {
+                UpdateStatus($"앱 종료 오류: {ex.Message}");
+            }
+        }
+    }
+
+    // 창 드래그 이벤트 핸들러
+    private void Grid_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        try
+        {
+            if (e.ButtonState == MouseButtonState.Pressed)
+            {
+                this.DragMove();
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"창 드래그 오류: {ex.Message}");
+        }
+    }
+
+    // 터치 다운 이벤트 핸들러
+    private void Grid_TouchDown(object sender, TouchEventArgs e)
+    {
+        try
+        {
+            this.DragMove();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"터치 드래그 오류: {ex.Message}");
+        }
+    }
+
+    // 터치 조작 시작 이벤트 핸들러
+    private void Grid_ManipulationStarted(object sender, ManipulationStartedEventArgs e)
+    {
+        try
+        {
+            this.DragMove();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"조작 드래그 오류: {ex.Message}");
+        }
+    }
+
     // 화면 전환 이벤트 핸들러
     private void ViewToggleButton_Click(object sender, RoutedEventArgs e)
     {
@@ -357,7 +448,6 @@ public partial class MainWindow : Window
                 // CCTV 화면으로 전환
                 ShowCCTVView();
                 ViewToggleButton.Content = "🎬 녹화 재생";
-                CurrentViewText.Text = "현재: 실시간 CCTV 화면";
                 UpdateStatus("실시간 CCTV 화면으로 전환");
             }
             else
@@ -365,7 +455,6 @@ public partial class MainWindow : Window
                 // 녹화영상 화면으로 전환
                 ShowRecordingView();
                 ViewToggleButton.Content = "📹 실시간 영상";
-                CurrentViewText.Text = "현재: 녹화영상 재생 화면";
                 UpdateStatus("녹화영상 재생 화면으로 전환");
             }
         }
@@ -967,5 +1056,188 @@ public partial class MainWindow : Window
         {
             System.Diagnostics.Debug.WriteLine($"MainWindow_Deactivated 오류: {ex.Message}");
         }
+    }
+
+    // 관성 스크롤 타이머 이벤트
+    private void InertiaTimer_Tick(object? sender, EventArgs e)
+    {
+        // 스크롤 속도가 임계값보다 작으면 타이머 중지
+        if (Math.Abs(_scrollVelocity) < VELOCITY_THRESHOLD)
+        {
+            _inertiaTimer?.Stop();
+            return;
+        }
+        
+        // 감속 적용
+        _scrollVelocity *= DECELERATION_RATE;
+        
+        // 값이 너무 작으면 중지
+        if (Math.Abs(_scrollVelocity) < VELOCITY_THRESHOLD)
+        {
+            _inertiaTimer?.Stop();
+            return;
+        }
+        
+        // 부드러운 스크롤 애니메이션
+        double targetOffset = MainScrollViewer.VerticalOffset + _scrollVelocity;
+        AnimateScroll(targetOffset);
+    }
+    
+    private void AnimateScroll(double targetOffset)
+    {
+        // 범위 내로 조정
+        targetOffset = Math.Max(0, Math.Min(targetOffset, MainScrollViewer.ScrollableHeight));
+        
+        // 현재 오프셋에서 목표 오프셋으로 애니메이션
+        DoubleAnimation animation = new DoubleAnimation(
+            MainScrollViewer.VerticalOffset,
+            targetOffset,
+            TimeSpan.FromMilliseconds(100),
+            FillBehavior.Stop)
+        {
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+        };
+        
+        animation.Completed += (s, e) => 
+        {
+            // 애니메이션이 끝난 후 명시적으로 스크롤 위치 설정
+            MainScrollViewer.ScrollToVerticalOffset(targetOffset);
+        };
+        
+        // 애니메이션 시작
+        MainScrollViewer.BeginAnimation(ScrollViewerOffsetProperty, animation);
+    }
+
+    // 새로운 스크롤 이벤트 핸들러들
+    private void MainScrollViewer_Loaded(object sender, RoutedEventArgs e)
+    {
+        // ScrollViewer가 로드된 후 맨 아래로 스크롤
+        MainScrollViewer.ScrollToEnd();
+    }
+    
+    private void Content_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        // 관성 스크롤 중지
+        _inertiaTimer.Stop();
+        _scrollVelocity = 0;
+        
+        _lastMousePosition = e.GetPosition(MainScrollViewer);
+        _isMouseDown = true;
+        ((UIElement)sender).CaptureMouse();
+        e.Handled = true;
+    }
+    
+    private void Content_MouseMove(object sender, MouseEventArgs e)
+    {
+        if (_isMouseDown)
+        {
+            Point currentPosition = e.GetPosition(MainScrollViewer);
+            double deltaY = _lastMousePosition.Y - currentPosition.Y;
+            
+            // 스크롤 속도 계산 (현재 이동 거리 = 속도)
+            _scrollVelocity = deltaY * 0.7; // 속도 계수 조정
+            
+            // 애니메이션 없이 즉시 스크롤
+            MainScrollViewer.ScrollToVerticalOffset(MainScrollViewer.VerticalOffset + deltaY);
+            
+            _lastMousePosition = currentPosition;
+            e.Handled = true;
+        }
+    }
+    
+    private void Content_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (_isMouseDown)
+        {
+            _isMouseDown = false;
+            ((UIElement)sender).ReleaseMouseCapture();
+            
+            // 관성 스크롤 시작
+            if (Math.Abs(_scrollVelocity) > VELOCITY_THRESHOLD)
+            {
+                _inertiaTimer.Start();
+            }
+            
+            e.Handled = true;
+        }
+    }
+    
+    private void Content_TouchDown(object sender, TouchEventArgs e)
+    {
+        // 관성 스크롤 중지
+        _inertiaTimer.Stop();
+        _scrollVelocity = 0;
+        
+        _lastPosition = e.GetTouchPoint(MainScrollViewer).Position;
+        _isScrolling = true;
+        e.Handled = true;
+    }
+    
+    private void MainScrollViewer_TouchMove(object sender, TouchEventArgs e)
+    {
+        if (_isMouseDown)
+        {
+            Point currentPosition = e.GetTouchPoint(MainScrollViewer).Position;
+            double deltaY = _lastMousePosition.Y - currentPosition.Y;
+            
+            // 스크롤 속도 계산
+            _scrollVelocity = deltaY * 0.7;
+            
+            // 즉시 스크롤
+            MainScrollViewer.ScrollToVerticalOffset(MainScrollViewer.VerticalOffset + deltaY);
+            
+            _lastMousePosition = currentPosition;
+            e.Handled = true;
+        }
+    }
+    
+    private void MainScrollViewer_TouchUp(object sender, TouchEventArgs e)
+    {
+        _isMouseDown = false;
+        
+        // 관성 스크롤 시작
+        if (Math.Abs(_scrollVelocity) > VELOCITY_THRESHOLD)
+        {
+            _inertiaTimer.Start();
+        }
+        
+        e.Handled = true;
+    }
+    
+    private void MainScrollViewer_TouchLeave(object sender, TouchEventArgs e)
+    {
+        _isMouseDown = false;
+    }
+    
+    private void MainScrollViewer_ManipulationBoundaryFeedback(object sender, ManipulationBoundaryFeedbackEventArgs e)
+    {
+        // 경계에 도달했을 때 바운스 효과 방지
+        e.Handled = true;
+    }
+
+    // ScrollViewer의 VerticalOffset을 애니메이션하기 위한 첨부 속성
+    public static readonly DependencyProperty ScrollViewerOffsetProperty =
+        DependencyProperty.RegisterAttached(
+            "ScrollViewerOffset",
+            typeof(double),
+            typeof(MainWindow),
+            new PropertyMetadata(0.0, OnScrollViewerOffsetChanged));
+    
+    private static void OnScrollViewerOffsetChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is ScrollViewer scrollViewer)
+        {
+            scrollViewer.ScrollToVerticalOffset((double)e.NewValue);
+        }
+    }
+    
+    public static void SetScrollViewerOffset(ScrollViewer element, double value)
+    {
+        element.SetValue(ScrollViewerOffsetProperty, value);
+    }
+    
+    public static double GetScrollViewerOffset(ScrollViewer element)
+    {
+        return (double)element.GetValue(ScrollViewerOffsetProperty);
     }
 }

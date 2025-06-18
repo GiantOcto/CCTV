@@ -6,10 +6,14 @@
         xmlns:local="clr-namespace:CCTV"
         mc:Ignorable="d"
         Title="CCTV 제어 시스템" Height="700" Width="1000"
+        d:DesignHeight="900" d:DesignWidth="1400"
         WindowStartupLocation="CenterScreen"
         WindowState="Normal"
         Loaded="Window_Loaded"
-        Background="#FF2E3440">
+        KeyDown="Window_KeyDown"
+        Background="Transparent"
+        WindowStyle="None"
+        ResizeMode="CanResize">
 
     <Window.Resources>
         <!-- 버튼 스타일 -->
@@ -23,6 +27,18 @@
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Margin" Value="5"/>
             <Setter Property="Padding" Value="10,5"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="8">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
 
         <!-- PTZ 버튼 스타일 -->
@@ -163,16 +179,52 @@
             </Setter>
         </Style>
 
+        <!-- 프리셋 버튼 스타일 -->
+        <Style x:Key="Preset_1ButtonStyle" TargetType="Button" BasedOn="{StaticResource MaterialDesignFlatButton}">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" Background="Transparent">
+                            <Image x:Name="buttonImage" Source="/Images/preset_1_normal.png" Stretch="Uniform"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="buttonImage" Property="Source" Value="/Images/preset_1_pressed.png"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- 프리셋 2 버튼 스타일 -->
+        <Style x:Key="Preset_2ButtonStyle" TargetType="Button" BasedOn="{StaticResource MaterialDesignFlatButton}">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" Background="Transparent">
+                            <Image x:Name="buttonImage" Source="/Images/preset_2_normal.png" Stretch="Uniform"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="buttonImage" Property="Source" Value="/Images/preset_2_pressed.png"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- 채널 버튼 스타일 -->
         <Style x:Key="ChannelButtonStyle" TargetType="ToggleButton">
-            <Setter Property="Background" Value="#FF434C5E"/>
+            <Setter Property="Background" Value="#FF77CAD1"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="BorderBrush" Value="#FF5E81AC"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontSize" Value="14"/>
             <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Margin" Value="2"/>
+            <Setter Property="Margin" Value="5"/>
             <Setter Property="Padding" Value="15,10"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -180,15 +232,15 @@
                         <Border Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="3">
+                                CornerRadius="5">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter Property="Background" Value="#FFBF616A"/>
+                                <Setter Property="Background" Value="#FF5E81AC"/>
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#FF4C566A"/>
+                                <Setter Property="Background" Value="#FF81A1C1"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -197,138 +249,153 @@
         </Style>
     </Window.Resources>
 
-    <Grid>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="350"/>
-        </Grid.ColumnDefinitions>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
+    <Border Background="#FF2E3440" BorderBrush="#FF2E3440" BorderThickness="8">
+        <Grid MouseLeftButtonDown="Grid_MouseLeftButtonDown" 
+              TouchDown="Grid_TouchDown" 
+              ManipulationStarted="Grid_ManipulationStarted"
+              IsManipulationEnabled="True">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="350"/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
 
-        <!-- 중앙 비디오 영역 (확장됨) -->
-        <Border Grid.Column="0" Grid.Row="0" Background="#292F44" Margin="10">
-        </Border>
+            <!-- 중앙 비디오 영역 (확장됨) -->
+            <Border Grid.Column="0" Grid.Row="0" Background="#292F44" Margin="10">
+            </Border>
 
-        <!-- 우측 제어 영역 (PTZ + 기존 좌측 제어 통합) -->
-        <Border Grid.Column="1" Grid.Row="0" Background="#292F44" BorderBrush="#FF4C566A" BorderThickness="1,0,0,0">
-            <ScrollViewer VerticalScrollBarVisibility="Hidden">
-                <StackPanel Margin="10">
-
-                    <!-- PTZ 제어 섹션 -->
-                    <GroupBox Header="PTZ 제어" Foreground="White" BorderBrush="#FF5E81AC" Margin="0,0,0,20">
-                        <Grid Margin="5">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="60"/>
-                                <!-- 틸트 UP -->
-                                <RowDefinition Height="60"/>
-                                <!-- 팬 LEFT/RIGHT -->
-                                <RowDefinition Height="60"/>
-                                <!-- 틸트 DOWN -->
-                                <RowDefinition Height="20"/>
-                                <!-- 간격 -->
-                                <RowDefinition Height="50"/>
-                                <!-- 줌 IN -->
-                                <RowDefinition Height="50"/>
-                                <!-- 줌 OUT -->
-                            </Grid.RowDefinitions>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="100"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-
-                            <!-- 틸트 UP -->
-                            <RepeatButton Grid.Row="0" Grid.Column="1" 
-                                         Style="{StaticResource CCTVUpTiltStyle}" 
-                                         Click="TiltUp_Click" Margin="0,-9,0,19" Grid.RowSpan="2"/>
-
-                            <!-- 팬 LEFT -->
-                            <RepeatButton Grid.Column="0" 
-                                         Style="{StaticResource CCTVLeftPanStyle}" 
-                                         Click="PanLeft_Click" Margin="6,51,75,29" Grid.RowSpan="3" Grid.ColumnSpan="2"/>
-
-                            <!-- 팬 RIGHT -->
-                            <RepeatButton Grid.Column="1" 
-                                         Style="{StaticResource CCTVRightPanStyle}" 
-                                         Click="PanRight_Click" Margin="84,42,10,20" Grid.RowSpan="3" Grid.ColumnSpan="2"/>
-
-                            <!-- 틸트 DOWN -->
-                            <RepeatButton Grid.Row="1" Grid.Column="1" 
-                                         Style="{StaticResource CCTVDownTiltStyle}" 
-                                         Click="TiltDown_Click" Margin="0,41,0,24" Grid.RowSpan="4"/>
-
-                            <!-- 줌 IN -->
-                            <RepeatButton Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2" 
-                                         Style="{StaticResource CCTVZoomInStyle}" 
-                                         Click="ZoomIn_Click" Margin="6,21,50,13" Grid.RowSpan="2"/>
-
-                            <!-- 줌 OUT -->
-                            <RepeatButton Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2" 
-                                         Style="{StaticResource CCTVZoomOutStyle}" 
-                                         Click="ZoomOut_Click" Margin="40,19,-9,13" Grid.RowSpan="2"/>
-                        </Grid>
-                    </GroupBox>
-
-                    <!-- CCTV 연결 섹션 -->
-                    <GroupBox Header="CCTV 연결" Foreground="White" BorderBrush="#FF5E81AC" Margin="0,0,0,20">
-                        <Button Content="CCTV 연결" Style="{StaticResource ButtonStyle}"
-                                Click="CCTVButton_Click" Height="40" Background="#FF77CAD1"/>
-                    </GroupBox>
-
-                    <!-- 화면 전환 섹션 -->
-                    <GroupBox Header="화면 전환" Foreground="White" BorderBrush="#FF5E81AC" Margin="0,0,0,20">
+            <!-- 우측 제어 영역 (PTZ + 기존 좌측 제어 통합) -->
+            <Border Grid.Column="1" Grid.Row="0" Background="#292F44" BorderBrush="#FF4C566A" BorderThickness="1,0,0,0"
+                    MouseLeftButtonDown="Grid_MouseLeftButtonDown" 
+                    TouchDown="Grid_TouchDown" 
+                    ManipulationStarted="Grid_ManipulationStarted"
+                    IsManipulationEnabled="True">
+                <ScrollViewer x:Name="MainScrollViewer"
+                              VerticalScrollBarVisibility="Hidden"
+                              HorizontalScrollBarVisibility="Disabled"
+                              CanContentScroll="False"
+                              PanningMode="VerticalOnly"
+                              IsManipulationEnabled="True"
+                              PanningRatio="1.0"
+                              PanningDeceleration="0.001"
+                              Loaded="MainScrollViewer_Loaded"
+                              ManipulationBoundaryFeedback="MainScrollViewer_ManipulationBoundaryFeedback">
+                    <Grid Margin="10"
+                          Background="Transparent"
+                          TouchDown="Content_TouchDown"
+                          MouseLeftButtonDown="Content_MouseLeftButtonDown" 
+                          MouseMove="Content_MouseMove"
+                          MouseLeftButtonUp="Content_MouseLeftButtonUp"
+                          IsManipulationEnabled="True">
                         <StackPanel>
-                            <Button x:Name="ViewToggleButton" Content="🎬 녹화 재생" Style="{StaticResource ButtonStyle}"
-                                    Click="ViewToggleButton_Click" Height="40" Background="#FF77CAD1"/>
-                            <TextBlock x:Name="CurrentViewText" Text="현재: 실시간 CCTV 화면" 
-                                      Foreground="#FFECEFF4" HorizontalAlignment="Center" 
-                                      FontSize="10" Margin="0,5,0,0"/>
+
+                            <!-- PTZ 제어 섹션 -->
+                            <Border BorderBrush="White" BorderThickness="1" CornerRadius="5" Margin="0,0,0,20" Padding="10">
+                                <Grid Margin="5">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="60"/>
+                                        <!-- 틸트 UP -->
+                                        <RowDefinition Height="60"/>
+                                        <!-- 팬 LEFT/RIGHT -->
+                                        <RowDefinition Height="60"/>
+                                        <!-- 틸트 DOWN -->
+                                        <RowDefinition Height="20"/>
+                                        <!-- 간격 -->
+                                        <RowDefinition Height="50"/>
+                                        <!-- 줌 IN -->
+                                        <RowDefinition Height="50"/>
+                                        <!-- 줌 OUT -->
+                                        <RowDefinition Height="10"/>
+                                        <!-- 간격 -->
+                                        <RowDefinition Height="50"/>
+                                        <!-- 프리셋 -->
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="100"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- 틸트 UP -->
+                                    <RepeatButton Grid.Row="0" Grid.Column="1" 
+                                                 Style="{StaticResource CCTVUpTiltStyle}" 
+                                                 Click="TiltUp_Click" Margin="0,-9,0,19" Grid.RowSpan="2"/>
+
+                                    <!-- 팬 LEFT -->
+                                    <RepeatButton Grid.Column="0" 
+                                                 Style="{StaticResource CCTVLeftPanStyle}" 
+                                                 Click="PanLeft_Click" Margin="6,51,75,29" Grid.RowSpan="3" Grid.ColumnSpan="2"/>
+
+                                    <!-- 팬 RIGHT -->
+                                    <RepeatButton Grid.Column="1" 
+                                                 Style="{StaticResource CCTVRightPanStyle}" 
+                                                 Click="PanRight_Click" Margin="84,42,10,20" Grid.RowSpan="3" Grid.ColumnSpan="2"/>
+
+                                    <!-- 틸트 DOWN -->
+                                    <RepeatButton Grid.Row="1" Grid.Column="1" 
+                                                 Style="{StaticResource CCTVDownTiltStyle}" 
+                                                 Click="TiltDown_Click" Margin="0,41,0,24" Grid.RowSpan="4"/>
+
+                                    <!-- 줌 IN -->
+                                    <RepeatButton Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2" 
+                                                 Style="{StaticResource CCTVZoomInStyle}" 
+                                                 Click="ZoomIn_Click" Margin="6,21,50,13" Grid.RowSpan="2"/>
+
+                                    <!-- 줌 OUT -->
+                                    <RepeatButton Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2" 
+                                                 Style="{StaticResource CCTVZoomOutStyle}" 
+                                                 Click="ZoomOut_Click" Margin="40,19,-9,13" Grid.RowSpan="2"/>
+
+                                    <!-- 프리셋 버튼들 -->
+                                    <Button Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2" Content="프리셋 1" Style="{StaticResource Preset_1ButtonStyle}"
+                                            Click="Preset1_Click" Height="70" Grid.RowSpan="3" Margin="-22,40,22,0" Width="130"/>
+                                    <Button Grid.Row="5" Grid.Column="1" Grid.ColumnSpan="2" Content="프리셋 2" Style="{StaticResource Preset_2ButtonStyle}"
+                                            Click="Preset2_Click" Height="70" Grid.RowSpan="3" Margin="24,40,-25,0"/>
+                                </Grid>
+                            </Border>
+
+                            <!-- 화면 전환 섹션 -->
+
+                            <!-- 채널 선택 섹션 -->
+                            <Border BorderBrush="White" BorderThickness="1" CornerRadius="5" Margin="0,0,0,20" Padding="10">
+                                <UniformGrid Columns="2" Rows="2">
+                                    <ToggleButton Name="Channel33Button" Content="Ch.1" Style="{StaticResource ChannelButtonStyle}" 
+                                                 Click="ChannelButton_Click" Tag="33" Height="55"/>
+                                    <ToggleButton Name="Channel34Button" Content="Ch.2" Style="{StaticResource ChannelButtonStyle}" 
+                                                 Click="ChannelButton_Click" Tag="34"/>
+                                    <ToggleButton Name="Channel35Button" Content="Ch.3" Style="{StaticResource ChannelButtonStyle}" 
+                                                 Click="ChannelButton_Click" Tag="35" Height="56"/>
+                                    <ToggleButton Name="Channel36Button" Content="Ch.4" Style="{StaticResource ChannelButtonStyle}" 
+                                                 Click="ChannelButton_Click" Tag="36"/>
+                                </UniformGrid>
+                            </Border>
+                            <Border BorderBrush="White" BorderThickness="1" CornerRadius="5" Padding="10" Height="131">
+                                <UniformGrid Rows="2">
+                                    <Button x:Name="ViewToggleButton" Content="🎬 녹화 재생" Style="{StaticResource ButtonStyle}"
+                                            Click="ViewToggleButton_Click" Height="40" Background="#FF77CAD1" Margin="0,0,0,5"/>
+                                    <Button Content="❌ 앱 종료" Style="{StaticResource ButtonStyle}"
+                                            Click="ExitButton_Click" Height="40" Background="#FFBF616A" Margin="0,5,0,0"/>
+                                </UniformGrid>
+                            </Border>
+
                         </StackPanel>
-                    </GroupBox>
+                    </Grid>
+                </ScrollViewer>
+            </Border>
 
-                    <!-- 채널 선택 섹션 -->
-                    <GroupBox Header="채널 선택" Foreground="White" BorderBrush="#FF5E81AC" Margin="0,0,0,20">
-                        <StackPanel>
-                            <TextBlock Text="현재 채널: 선택 안됨" x:Name="CurrentChannelText" 
-                                      Foreground="White" HorizontalAlignment="Center" Margin="0,0,0,10"/>
-                            <UniformGrid Columns="2" Rows="2">
-                                <ToggleButton Name="Channel33Button" Content="33" Style="{StaticResource ChannelButtonStyle}" 
-                                             Click="ChannelButton_Click" Tag="33" Height="33"/>
-                                <ToggleButton Name="Channel34Button" Content="34" Style="{StaticResource ChannelButtonStyle}" 
-                                             Click="ChannelButton_Click" Tag="34"/>
-                                <ToggleButton Name="Channel35Button" Content="35" Style="{StaticResource ChannelButtonStyle}" 
-                                             Click="ChannelButton_Click" Tag="35"/>
-                                <ToggleButton Name="Channel36Button" Content="36" Style="{StaticResource ChannelButtonStyle}" 
-                                             Click="ChannelButton_Click" Tag="36"/>
-                            </UniformGrid>
-                        </StackPanel>
-                    </GroupBox>
-
-                    <!-- 프리셋 섹션 -->
-                    <GroupBox Header="프리셋" Foreground="White" BorderBrush="#FF5E81AC">
-                        <UniformGrid Columns="2">
-                            <Button Content="프리셋 1" Style="{StaticResource ButtonStyle}"
-                                    Click="Preset1_Click"/>
-                            <Button Content="프리셋 2" Style="{StaticResource ButtonStyle}"
-                                    Click="Preset2_Click"/>
-                        </UniformGrid>
-                    </GroupBox>
-
-                </StackPanel>
-            </ScrollViewer>
-        </Border>
-
-        <!-- 하단 상태바 -->
-        <Border Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="1" 
-               Background="#FF2E3440" 
-               BorderBrush="#FF4C566A" 
-               BorderThickness="0,1,0,0"
-               Height="30">
-            <TextBlock x:Name="StatusTextBlock" Text="CCTV 제어 시스템 준비됨" 
-                       Foreground="White" 
-                       VerticalAlignment="Center" Margin="10,0"/>
-        </Border>
-    </Grid>
+            <!-- 하단 상태바 -->
+            <Border Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="1" 
+                   Background="#FF2E3440" 
+                   BorderBrush="#FF4C566A" 
+                   BorderThickness="0,1,0,0"
+                   Height="30">
+                <TextBlock x:Name="StatusTextBlock" Text="CCTV 제어 시스템 준비됨" 
+                           Foreground="White" 
+                           VerticalAlignment="Center" Margin="10,0"/>
+            </Border>
+        </Grid>
+    </Border>
 </Window>

@@ -147,7 +147,7 @@
                 <TextBlock Text="종료:" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="Black"/>
                 <xctk:TimePicker x:Name="EndTimePicker" Width="100" Format="Custom" FormatString="HH:mm:ss" Value="23:59:59" Margin="0,0,10,0" Foreground="Black" ToolTip="시간을 입력하세요. 숫자만 입력하고 엔터를 누르면 자동으로 시간이 설정됩니다.&#x0a;예: 14 → 14:00:00, 1430 → 14:30:00, 143055 → 14:30:55" />
 
-                <Button x:Name="SearchButton" Content="검색" Width="80" Height="30" Click="SearchButton_Click" Background="#007ACC" Foreground="White" Margin="5,0,0,0"/>
+                <Button x:Name="SearchButton" Content="검색" Width="80" Height="30" Click="SearchButton_Click" Background="#FF77CAD1" Foreground="White" Margin="5,0,0,0"/>
             </StackPanel>
 
             <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="5">
@@ -226,23 +226,23 @@
             </Grid.ColumnDefinitions>
 
             <StackPanel Grid.Column="0" Orientation="Horizontal">
-                <Button x:Name="PlayButton" Width="50" Height="50" Margin="5" Padding="4" Click="PlayButton_Click" ToolTip="재생" IsEnabled="True" Style="{StaticResource MaterialDesignRaisedButton}" Background="#2196F3">
+                <Button x:Name="PlayButton" Width="50" Height="50" Margin="5" Padding="4" Click="PlayButton_Click" ToolTip="재생" IsEnabled="True" Style="{StaticResource MaterialDesignRaisedButton}" Background="#FF77CAD1">
                     <materialDesign:PackIcon Kind="Play" Width="28" Height="28" />
                 </Button>
 
-                <Button x:Name="PauseButton" Width="50" Height="50" Margin="5" Padding="4" Click="PauseButton_Click" ToolTip="일시정지" IsEnabled="False" Style="{StaticResource MaterialDesignRaisedButton}" Background="#2196F3">
+                <Button x:Name="PauseButton" Width="50" Height="50" Margin="5" Padding="4" Click="PauseButton_Click" ToolTip="일시정지" IsEnabled="False" Style="{StaticResource MaterialDesignRaisedButton}" Background="#FF77CAD1">
                     <materialDesign:PackIcon Kind="Pause" Width="28" Height="28" />
                 </Button>
 
-                <Button x:Name="StopButton" Width="50" Height="50" Margin="5" Padding="4" Click="StopButton_Click" ToolTip="정지" IsEnabled="False" Style="{StaticResource MaterialDesignRaisedButton}" Background="#2196F3">
+                <Button x:Name="StopButton" Width="50" Height="50" Margin="5" Padding="4" Click="StopButton_Click" ToolTip="정지" IsEnabled="False" Style="{StaticResource MaterialDesignRaisedButton}" Background="#FF77CAD1">
                     <materialDesign:PackIcon Kind="Stop" Width="28" Height="28" />
                 </Button>
 
-                <Button x:Name="FastForwardButton" Width="50" Height="50" Margin="5" Padding="4" Click="FastForwardButton_Click" ToolTip="빨리 감기" IsEnabled="False" Style="{StaticResource MaterialDesignRaisedButton}" Background="#2196F3">
+                <Button x:Name="FastForwardButton" Width="50" Height="50" Margin="5" Padding="4" Click="FastForwardButton_Click" ToolTip="빨리 감기" IsEnabled="False" Style="{StaticResource MaterialDesignRaisedButton}" Background="#FF77CAD1">
                     <materialDesign:PackIcon Kind="FastForward" Width="28" Height="28" />
                 </Button>
 
-                <Button x:Name="SlowButton" Width="50" Height="50" Margin="5" Padding="4" Click="SlowButton_Click" ToolTip="느리게 재생" IsEnabled="False" Style="{StaticResource MaterialDesignRaisedButton}" Background="#2196F3">
+                <Button x:Name="SlowButton" Width="50" Height="50" Margin="5" Padding="4" Click="SlowButton_Click" ToolTip="느리게 재생" IsEnabled="False" Style="{StaticResource MaterialDesignRaisedButton}" Background="#FF77CAD1">
                     <materialDesign:PackIcon Kind="Rewind" Width="28" Height="28" />
                 </Button>
 
