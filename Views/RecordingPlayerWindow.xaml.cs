@@ -174,15 +174,16 @@ namespace CCTV.Views
                     return;
                 }
 
-                // 2열 레이아웃에서 왼쪽 영상 영역 전체를 사용
-                double rightPanelWidth = 350; // 우측 패널 너비
+                // 상하 레이아웃에서 상단 영상 영역 전체를 사용
+                double controlPanelHeight = 250; // 하단 제어 패널 높이
+                double statusBarHeight = 30; // 상태바 높이
                 double margin = 10; // 마진
                 
-                // 왼쪽 영상 영역의 위치와 크기 계산
-                double windowX = this.Owner.Left + margin + 20; // 추가 왼쪽 마진
+                // 상단 영상 영역의 위치와 크기 계산
+                double windowX = this.Owner.Left + margin + 20;
                 double windowY = this.Owner.Top + 40 + 20; // 타이틀바 높이 + 상단 마진
-                double windowWidth = this.Owner.Width - rightPanelWidth - (margin * 3) - 40; // 추가 마진 고려
-                double windowHeight = this.Owner.Height - 40 - 30 - (margin * 2) - 40; // 타이틀바, 상태바, 추가 마진 제외
+                double windowWidth = this.Owner.Width - (margin * 2) - 40;
+                double windowHeight = this.Owner.Height - controlPanelHeight - statusBarHeight - 40 - (margin * 2) - 40; // 전체 상단 영역 사용
                 
                 // 화면 경계 확인
                 double screenWidth = SystemParameters.PrimaryScreenWidth;
@@ -215,9 +216,6 @@ namespace CCTV.Views
                 this.Height = windowHeight;
                 
                 System.Diagnostics.Debug.WriteLine($"RecordingPlayerWindow 위치 설정: Left={windowX}, Top={windowY}, Width={windowWidth}, Height={windowHeight}");
-                
-                // 비디오 윈도우 위치도 업데이트
-                UpdateVideoWindowPosition();
             }
             catch (Exception ex)
             {
@@ -1147,60 +1145,56 @@ namespace CCTV.Views
         {
             try
             {
-                // Owner 윈도우 이벤트 핸들러 해제
-                if (this.Owner != null)
+                System.Diagnostics.Debug.WriteLine("RecordingPlayerWindow_Closing 호출됨");
+                
+                // 재생 중인 경우 중지
+                if (isPlaying)
                 {
-                    this.Owner.LocationChanged -= Owner_LocationChanged;
-                    this.Owner.SizeChanged -= Owner_SizeChanged;
-                    this.Owner.StateChanged -= Owner_StateChanged;
-                    System.Diagnostics.Debug.WriteLine("RecordingPlayerWindow: Owner 이벤트 핸들러 해제 완료");
+                    StopPlayback();
                 }
                 
-                // 진행률 타이머 안전하게 정리
-                if (progressTimer != null)
+                // Owner 창에서 시작된 닫기 요청인지 확인
+                if (Application.Current.MainWindow?.IsLoaded == true)
                 {
-                    progressTimer.Stop();
-                    progressTimer = null;
-                    isTimerActive = false;
-                    LogError("progressTimer 안전하게 정리됨");
+                    // 앱이 완전히 종료되지 않는 한 창을 숨기기만 함
+                    e.Cancel = true;
+                    // 최소화 대신 창을 그대로 유지
+                    // this.WindowState = WindowState.Minimized;
+                    
+                    // 비디오 윈도우는 숨기지 않음
+                    // if (_videoWindow != null)
+                    // {
+                    //     _videoWindow.Hide();
+                    // }
+                    
+                    System.Diagnostics.Debug.WriteLine("RecordingPlayerWindow 닫기 요청 무시됨 - 창을 계속 표시");
                 }
-                
-                // 재생 중지 및 리소스 정리
-                StopPlayback();
-
-                // 로그아웃
-                if (m_lUserID >= 0)
+                else
                 {
-                    Models.CCTV.NET_DVR_Logout(m_lUserID);
-                    m_lUserID = -1;
-                }
-
-                // SDK 종료 
-                if (m_bInitSDK)
-                {
-                    Models.CCTV.NET_DVR_Cleanup();
-                    m_bInitSDK = false;
-                }
-                
-                // 비디오 창 정리
-                if (_videoWindow != null)
-                {
-                    _videoWindow.Close();
-                    _videoWindow = null;
-                }
-                
-                // 상태 리셋 타이머 정리
-                if (statusResetTimer != null)
-                {
-                    statusResetTimer.Stop();
-                    statusResetTimer = null;
+                    // 앱 종료 시에만 실제로 정리
+                    CleanupResources();
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"RecordingPlayerWindow 종료 중 오류: {ex.Message}");
-                LogError($"RecordingPlayerWindow 종료 중 오류: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"RecordingPlayerWindow_Closing 오류: {ex.Message}");
             }
+        }
+
+        protected override void OnDeactivated(EventArgs e)
+        {
+            // 포커스를 잃었을 때는 아무것도 하지 않음 (창을 숨기지 않음)
+            // 창이 항상 위에 표시되도록 Topmost 재설정
+            this.Topmost = true;
+            base.OnDeactivated(e);
+        }
+
+        protected override void OnLostFocus(RoutedEventArgs e)
+        {
+            // 포커스를 잃었을 때는 아무것도 하지 않음 (창을 숨기지 않음)
+            // 창이 항상 위에 표시되도록 Topmost 재설정
+            this.Topmost = true;
+            base.OnLostFocus(e);
         }
         
         // Visibility 변경 이벤트 핸들러
@@ -2596,6 +2590,66 @@ namespace CCTV.Views
             catch (Exception ex)
             {
                 LogError($"녹화재생 재개 오류: {ex.Message}");
+            }
+        }
+
+        private void CleanupResources()
+        {
+            try
+            {
+                // Owner 윈도우 이벤트 핸들러 해제
+                if (this.Owner != null)
+                {
+                    this.Owner.LocationChanged -= Owner_LocationChanged;
+                    this.Owner.SizeChanged -= Owner_SizeChanged;
+                    this.Owner.StateChanged -= Owner_StateChanged;
+                    System.Diagnostics.Debug.WriteLine("RecordingPlayerWindow: Owner 이벤트 핸들러 해제 완료");
+                }
+                
+                // 진행률 타이머 안전하게 정리
+                if (progressTimer != null)
+                {
+                    progressTimer.Stop();
+                    progressTimer = null;
+                    isTimerActive = false;
+                    LogError("progressTimer 안전하게 정리됨");
+                }
+                
+                // 재생 중지 및 리소스 정리
+                StopPlayback();
+                
+                // 로그아웃
+                if (m_lUserID >= 0)
+                {
+                    Models.CCTV.NET_DVR_Logout(m_lUserID);
+                    m_lUserID = -1;
+                }
+
+                // SDK 종료 
+                if (m_bInitSDK)
+                {
+                    Models.CCTV.NET_DVR_Cleanup();
+                    m_bInitSDK = false;
+                }
+                
+                // 비디오 창 정리
+                if (_videoWindow != null)
+                {
+                    _videoWindow.Close();
+                    _videoWindow = null;
+                }
+                
+                // 상태 리셋 타이머 정리
+                if (statusResetTimer != null)
+                {
+                    statusResetTimer.Stop();
+                    statusResetTimer = null;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"RecordingPlayerWindow 리소스 정리 중 오류: {ex.Message}");
+                LogError($"RecordingPlayerWindow 리소스 정리 중 오류: {ex.Message}");
             }
         }
     }

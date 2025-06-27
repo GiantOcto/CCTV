@@ -128,8 +128,30 @@ namespace CCTV.Views
         protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
         {
             // CCTV 창이 닫힐 때는 숨기기만 하고 실제로는 닫지 않음
-            e.Cancel = true;
-            this.Hide();
+            // Owner 창에서 시작된 닫기 요청인지 확인
+            if (Application.Current.MainWindow?.IsLoaded == true)
+            {
+                e.Cancel = true;
+                // 최소화 대신 창을 그대로 유지
+                // this.WindowState = WindowState.Minimized;
+                System.Diagnostics.Debug.WriteLine("CCTV창 닫기 요청 무시됨 - 창을 계속 표시");
+            }
+        }
+
+        protected override void OnDeactivated(EventArgs e)
+        {
+            // 포커스를 잃었을 때는 아무것도 하지 않음 (창을 숨기지 않음)
+            // 창이 항상 위에 표시되도록 Topmost 재설정
+            this.Topmost = true;
+            base.OnDeactivated(e);
+        }
+
+        protected override void OnLostFocus(RoutedEventArgs e)
+        {
+            // 포커스를 잃었을 때는 아무것도 하지 않음 (창을 숨기지 않음)
+            // 창이 항상 위에 표시되도록 Topmost 재설정
+            this.Topmost = true;
+            base.OnLostFocus(e);
         }
 
         private void CCTVWindow_SourceInitialized(object sender, EventArgs e)
@@ -199,15 +221,16 @@ namespace CCTV.Views
                     return;
                 }
 
-                // 2열 레이아웃에서 왼쪽 영상 영역 전체를 사용
-                double rightPanelWidth = 350; // 우측 패널 너비
+                // 상하 레이아웃에서 상단 영상 영역 전체를 사용
+                double controlPanelHeight = 250; // 하단 제어 패널 높이
+                double statusBarHeight = 30; // 상태바 높이
                 double margin = 10; // 마진
                 
-                // 왼쪽 영상 영역의 위치와 크기 계산
-                double windowX = this.Owner.Left + margin + 20; // 추가 왼쪽 마진
+                // 상단 영상 영역의 위치와 크기 계산
+                double windowX = this.Owner.Left + margin + 20;
                 double windowY = this.Owner.Top + 40 + 20; // 타이틀바 높이 + 상단 마진
-                double windowWidth = this.Owner.Width - rightPanelWidth - (margin * 3) - 40; // 추가 마진 고려
-                double windowHeight = this.Owner.Height - 40 - 30 - (margin * 2) - 40; // 타이틀바, 상태바, 추가 마진 제외
+                double windowWidth = this.Owner.Width - (margin * 2) - 40;
+                double windowHeight = this.Owner.Height - controlPanelHeight - statusBarHeight - 40 - (margin * 2) - 40; // 전체 상단 영역 사용
                 
                 // 화면 경계 확인
                 double screenWidth = SystemParameters.PrimaryScreenWidth;

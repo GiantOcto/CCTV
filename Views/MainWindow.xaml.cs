@@ -44,6 +44,18 @@ public partial class MainWindow : Window
     private const double DECELERATION_RATE = 0.90; // 감속률 (값이 클수록 더 오래 스크롤)
     private const double VELOCITY_THRESHOLD = 0.5; // 스크롤 중지 임계값
 
+    // 윈도우 위치 상태 관련 필드 추가
+    private bool _isDockedToRight = false;
+    private double _originalLeft;
+    private double _originalTop;
+    private double _originalWidth;
+    private double _originalHeight;
+    private WindowState _originalWindowState;
+
+    // 더블클릭 감지용 필드
+    private DateTime _lastClickTime = DateTime.MinValue;
+    private const double DOUBLE_CLICK_TIME = 500; // 500ms 내 두 번째 클릭시 더블클릭으로 인식
+
     public MainWindow()
     {
         InitializeComponent();
@@ -63,7 +75,7 @@ public partial class MainWindow : Window
         _inertiaTimer.Interval = TimeSpan.FromMilliseconds(16); // 약 60fps
         _inertiaTimer.Tick += InertiaTimer_Tick;
         
-        // 관성 스크롤링 활성화
+        // 관성 스크롤링 활성화 (세로 모드에 맞게 설정)
         MainScrollViewer.PanningMode = PanningMode.VerticalOnly;
         MainScrollViewer.PanningDeceleration = 0.001; // 감속 값이 작을수록 더 긴 관성
         MainScrollViewer.PanningRatio = 1.0; // 스크롤링 비율
@@ -399,7 +411,22 @@ public partial class MainWindow : Window
     {
         try
         {
-            if (e.ButtonState == MouseButtonState.Pressed)
+            // 더블클릭 감지
+            DateTime currentTime = DateTime.Now;
+            TimeSpan timeSinceLastClick = currentTime - _lastClickTime;
+            
+            if (timeSinceLastClick.TotalMilliseconds < DOUBLE_CLICK_TIME)
+            {
+                // 더블클릭 처리
+                HandleDoubleClick();
+                _lastClickTime = DateTime.MinValue; // 리셋
+                return;
+            }
+            
+            _lastClickTime = currentTime;
+            
+            // 일반 드래그 처리
+            if (e.ButtonState == MouseButtonState.Pressed && !_isDockedToRight)
             {
                 this.DragMove();
             }
@@ -571,8 +598,9 @@ public partial class MainWindow : Window
             System.Diagnostics.Debug.WriteLine($"메인 윈도우 위치: Left={this.Left}, Top={this.Top}");
             System.Diagnostics.Debug.WriteLine($"WindowState: {this.WindowState}");
             
-            // 2열 레이아웃에서 왼쪽 영상 영역 전체를 사용
-            double rightPanelWidth = 350; // 우측 패널 너비
+            // 상하 레이아웃에서 상단 영상 영역 전체를 사용
+            double controlPanelHeight = 250; // 하단 제어 패널 높이
+            double statusBarHeight = 30; // 상태바 높이
             double margin = 10; // 마진
             
             double windowX, windowY, windowWidth, windowHeight;
@@ -585,16 +613,16 @@ public partial class MainWindow : Window
                 
                 windowX = workArea.Left + margin + 20;
                 windowY = workArea.Top + 60; // 타이틀바와 메뉴 영역을 고려한 위치
-                windowWidth = workArea.Width - rightPanelWidth - (margin * 3) - 40;
-                windowHeight = workArea.Height - 60 - 30 - (margin * 2) - 40; // 상단 여백과 상태바, 마진 제외
+                windowWidth = workArea.Width - (margin * 2) - 40;
+                windowHeight = workArea.Height - controlPanelHeight - statusBarHeight - 60 - (margin * 2) - 40; // 제어 패널과 상태바, 상단 여백 제외
             }
             else
             {
                 // 일반 상태에서는 메인 윈도우 크기 사용
                 windowX = this.Left + margin + 20;
                 windowY = this.Top + 40 + 20; // 타이틀바 높이 + 상단 마진
-                windowWidth = this.Width - rightPanelWidth - (margin * 3) - 40;
-                windowHeight = this.Height - 40 - 30 - (margin * 2) - 40; // 타이틀바, 상태바, 추가 마진 제외
+                windowWidth = this.Width - (margin * 2) - 40;
+                windowHeight = this.Height - controlPanelHeight - statusBarHeight - 40 - (margin * 2) - 40; // 제어 패널, 상태바, 타이틀바 제외
             }
             
             System.Diagnostics.Debug.WriteLine($"계산된 자식 윈도우 크기: Width={windowWidth}, Height={windowHeight}");
@@ -780,19 +808,16 @@ public partial class MainWindow : Window
     {
         if (_recordingPlayerWindow != null)
         {
-            // 2열 레이아웃에 맞춰 위치 계산
-            double rightPanelWidth = 350; // 우측 패널 너비
+            // 상하 레이아웃에 맞춰 위치 계산
+            double controlPanelHeight = 250; // 하단 제어 패널 높이
+            double statusBarHeight = 30; // 상태바 높이
             double margin = 10; // 마진
             
-            // 왼쪽 영상 영역의 위치와 크기 계산 (CCTV 윈도우와 동일)
-            double recordingX = this.Left + margin + 20; // CCTV 윈도우와 동일한 X 위치
-            double recordingWidth = this.Width - rightPanelWidth - (margin * 3) - 40; // CCTV 윈도우와 동일한 너비
-            double totalHeight = this.Height - 40 - 30 - (margin * 2) - 40; // 전체 사용 가능 높이
-            double recordingHeight = totalHeight / 2; // 절반 높이
-            
-            // CCTV 윈도우의 시작 Y 위치와 높이를 기준으로 바로 아래에 배치
-            double cctvStartY = this.Top + 40 + 20; // CCTV 윈도우 시작 Y 위치
-            double recordingY = cctvStartY + recordingHeight + 5; // CCTV 윈도우 아래 + 5px 간격
+            // 상단 영상 영역의 위치와 크기 계산 (전체 상단 영역 사용)
+            double recordingX = this.Left + margin + 20;
+            double recordingY = this.Top + 40 + 20; // 타이틀바 높이 + 상단 마진
+            double recordingWidth = this.Width - (margin * 2) - 40;
+            double recordingHeight = this.Height - controlPanelHeight - statusBarHeight - 40 - (margin * 2) - 40; // 전체 상단 영역 사용
             
             // 화면 경계 확인
             double screenWidth = SystemParameters.PrimaryScreenWidth;
@@ -810,7 +835,7 @@ public partial class MainWindow : Window
             
             // 최소 크기 보장
             recordingWidth = Math.Max(recordingWidth, 400);
-            recordingHeight = Math.Max(recordingHeight, 150);
+            recordingHeight = Math.Max(recordingHeight, 300);
             
             _recordingPlayerWindow.Left = recordingX;
             _recordingPlayerWindow.Top = recordingY;
@@ -823,18 +848,16 @@ public partial class MainWindow : Window
     {
         if (_cctvWindow != null)
         {
-            // 2열 레이아웃: 왼쪽 영상 영역(Grid.Column="0")에 CCTV 윈도우 고정
-            double rightPanelWidth = 350; // 우측 패널 너비
+            // 상하 레이아웃: 상단 영상 영역에 CCTV 윈도우 고정
+            double controlPanelHeight = 250; // 하단 제어 패널 높이
+            double statusBarHeight = 30; // 상태바 높이
             double margin = 10; // 마진
             
-            // 왼쪽 영상 영역의 위치와 크기 계산
-            double cctvX = this.Left + margin + 20; // 추가 왼쪽 마진
+            // 상단 영상 영역의 위치와 크기 계산
+            double cctvX = this.Left + margin + 20;
             double cctvY = this.Top + 40 + 20; // 타이틀바 높이 + 상단 마진
-            double cctvWidth = this.Width - rightPanelWidth - (margin * 3) - 40; // 추가 마진 고려
-            double totalHeight = this.Height - 40 - 30 - (margin * 2) - 40; // 타이틀바, 상태바, 추가 마진 제외
-            
-            // 항상 절반 높이로 설정 (녹화영상 윈도우와 공유)
-            double cctvHeight = totalHeight / 2;
+            double cctvWidth = this.Width - (margin * 2) - 40;
+            double cctvHeight = this.Height - controlPanelHeight - statusBarHeight - 40 - (margin * 2) - 40; // 전체 상단 영역 사용
             
             // 화면 경계 확인
             double screenWidth = SystemParameters.PrimaryScreenWidth;
@@ -852,7 +875,7 @@ public partial class MainWindow : Window
             
             // 최소 크기 보장
             cctvWidth = Math.Max(cctvWidth, 400);
-            cctvHeight = Math.Max(cctvHeight, 150);
+            cctvHeight = Math.Max(cctvHeight, 300);
             
             _cctvWindow.Left = cctvX;
             _cctvWindow.Top = cctvY;
@@ -979,78 +1002,17 @@ public partial class MainWindow : Window
     {
         try
         {
-            // 이미 타이머가 실행 중이면 중복 실행 방지
+            // 바탕화면 클릭으로 인한 창 숨김을 방지하기 위해 비활성화 처리를 비활성화
+            // 사용자가 명시적으로 창을 닫거나 애플리케이션을 종료할 때만 창을 숨김
+            System.Diagnostics.Debug.WriteLine("MainWindow_Deactivated: 창 숨김 처리를 건너뜀 (포커스 유지 모드)");
+            
+            // 기존 타이머가 있다면 중지
             if (_deactivationTimer != null && _deactivationTimer.IsEnabled)
             {
                 _deactivationTimer.Stop();
             }
             
-            // 새 타이머 생성 (기존 타이머 재사용)
-            if (_deactivationTimer == null)
-            {
-                _deactivationTimer = new System.Windows.Threading.DispatcherTimer
-                {
-                    Interval = TimeSpan.FromMilliseconds(100) // 100ms로 단축하여 응답성 향상
-                };
-                _deactivationTimer.Tick += (timerSender, timerE) =>
-                {
-                    try
-                    {
-                        _deactivationTimer.Stop();
-                        
-                        // 효율적인 윈도우 검사 - 캐시된 결과 사용
-                        bool isAppWindowActive = false;
-                        
-                        // 메인 윈도우 활성화 상태 체크
-                        if (this.IsActive)
-                        {
-                            isAppWindowActive = true;
-                        }
-                        else
-                        {
-                            // 자식 윈도우들만 체크 (전체 윈도우 순회 대신)
-                            if (_cctvWindow?.IsActive == true || _recordingPlayerWindow?.IsActive == true)
-                            {
-                                isAppWindowActive = true;
-                            }
-                        }
-                        
-                        System.Diagnostics.Debug.WriteLine($"비활성화 체크: isAppWindowActive={isAppWindowActive}");
-                        
-                        if (!isAppWindowActive)
-                        {
-                            // 애플리케이션이 완전히 비활성화됨 - 자식 윈도우들 숨김
-                            System.Diagnostics.Debug.WriteLine("애플리케이션 완전 비활성화 - 자식 윈도우 숨김");
-                            
-                            // CCTV 윈도우 숨김
-                            if (_cctvWindow != null && _cctvWindow.IsVisible)
-                            {
-                                _cctvWindow.Hide();
-                                System.Diagnostics.Debug.WriteLine("CCTV 윈도우 숨김");
-                            }
-                            
-                            // RecordingPlayer 윈도우 숨김
-                            if (_recordingPlayerWindow != null && _recordingPlayerWindow.IsVisible)
-                            {
-                                _recordingPlayerWindow.Hide();
-                                System.Diagnostics.Debug.WriteLine("RecordingPlayer 윈도우 숨김");
-                                
-                                // RecordingVideoWindow도 강제 숨김
-                                _recordingPlayerWindow.HideVideoWindow();
-                            }
-                        }
-                    }
-                    catch (Exception timerEx)
-                    {
-                        System.Diagnostics.Debug.WriteLine($"비활성화 타이머 오류: {timerEx.Message}");
-                    }
-                };
-            }
-            
-            // 타이머 시작
-            _deactivationTimer.Start();
-            
-            System.Diagnostics.Debug.WriteLine("MainWindow_Deactivated: 지연된 체크 타이머 시작됨 (100ms)");
+            // 창 숨김 처리를 하지 않음 - CCTV창과 녹화재생창이 계속 표시됨
         }
         catch (Exception ex)
         {
@@ -1239,5 +1201,102 @@ public partial class MainWindow : Window
     public static double GetScrollViewerOffset(ScrollViewer element)
     {
         return (double)element.GetValue(ScrollViewerOffsetProperty);
+    }
+
+    // 더블클릭 이벤트 핸들러
+    private void HandleDoubleClick()
+    {
+        try
+        {
+            if (_isDockedToRight)
+            {
+                // 원상복귀
+                RestoreWindowPosition();
+            }
+            else
+            {
+                // 우측으로 이동 및 작업표시줄 위 표시
+                DockToRightSide();
+            }
+        }
+        catch (Exception ex)
+        {
+            UpdateStatus($"윈도우 위치 변경 오류: {ex.Message}");
+        }
+    }
+
+    // 우측으로 도킹
+    private void DockToRightSide()
+    {
+        try
+        {
+            // 현재 위치 저장
+            _originalLeft = this.Left;
+            _originalTop = this.Top;
+            _originalWidth = this.Width;
+            _originalHeight = this.Height;
+            _originalWindowState = this.WindowState;
+
+            // 실제 화면 정보 가져오기
+            double screenWidth = SystemParameters.PrimaryScreenWidth;
+            double screenHeight = SystemParameters.PrimaryScreenHeight;
+            var workArea = SystemParameters.WorkArea;
+            
+            System.Diagnostics.Debug.WriteLine($"실제 화면 크기: Width={screenWidth}, Height={screenHeight}");
+            System.Diagnostics.Debug.WriteLine($"현재 윈도우 크기: Width={this.Width}, Height={this.Height}");
+            
+            // 윈도우를 우측으로 이동
+            this.WindowState = WindowState.Normal;
+            
+            // 현재 윈도우 크기 유지 (640x1080)
+            double newWidth = this.Width; // 640 유지
+            double newHeight = this.Height; // 1080 유지
+            
+            // 화면 우측 끝에 정확히 맞추기
+            // 1920 - 640 = 1280
+            double newLeft = screenWidth - newWidth;
+            double newTop = workArea.Top;
+            
+            System.Diagnostics.Debug.WriteLine($"계산된 위치: Left={newLeft} (화면폭 {screenWidth} - 윈도우폭 {newWidth})");
+            System.Diagnostics.Debug.WriteLine($"새 윈도우 설정: Left={newLeft}, Top={newTop}, Width={newWidth}, Height={newHeight}");
+            
+            // 윈도우 위치 설정 (크기는 변경하지 않음)
+            this.Left = newLeft;
+            this.Top = newTop;
+            
+            // 항상 위에 표시
+            this.Topmost = true;
+            
+            _isDockedToRight = true;
+            UpdateStatus($"윈도우가 화면 우측 끝(X:{newLeft})으로 이동되었습니다. 더블클릭으로 복귀할 수 있습니다.");
+        }
+        catch (Exception ex)
+        {
+            UpdateStatus($"우측 도킹 오류: {ex.Message}");
+        }
+    }
+
+    // 원상복귀
+    private void RestoreWindowPosition()
+    {
+        try
+        {
+            // 원래 위치와 크기로 복귀
+            this.WindowState = _originalWindowState;
+            this.Left = _originalLeft;
+            this.Top = _originalTop;
+            this.Width = _originalWidth;
+            this.Height = _originalHeight;
+            
+            // Topmost 해제
+            this.Topmost = false;
+            
+            _isDockedToRight = false;
+            UpdateStatus("윈도우가 원래 위치로 복귀되었습니다.");
+        }
+        catch (Exception ex)
+        {
+            UpdateStatus($"원상복귀 오류: {ex.Message}");
+        }
     }
 }
