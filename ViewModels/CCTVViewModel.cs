@@ -921,20 +921,27 @@ namespace CCTV.ViewModels
                 {
                     LogMessage("CCTV 스트림 일시정지 시작");
                     
-                    // 모든 활성 스트림을 일시정지
+                    // 모든 활성 스트림을 일시정지하고 핸들 정리
+                    var handlesToRemove = new List<int>();
                     foreach (var handle in m_lRealHandles.ToList())
                     {
                         if (handle.Value >= 0)
                         {
-                            // 실시간 재생 중지 (완전 중지가 아닌 일시정지)
+                            // 실시간 재생 중지
                             bool result = Models.CCTV.NET_DVR_StopRealPlay(handle.Value);
                             LogMessage($"스트림 일시정지: 채널 {handle.Key}, 핸들 {handle.Value}, 결과: {result}");
+                            handlesToRemove.Add(handle.Key);
                         }
                     }
                     
-                    // 핸들은 유지하되 상태만 기록
+                    // 중지된 핸들들을 Dictionary에서 제거
+                    foreach (int channelNum in handlesToRemove)
+                    {
+                        m_lRealHandles.Remove(channelNum);
+                    }
+                    
                     StatusMessage = "CCTV 스트림 일시정지됨 (화면 전환)";
-                    LogMessage("CCTV 스트림 일시정지 완료");
+                    LogMessage("CCTV 스트림 일시정지 완료 - 핸들 정리됨");
                 }
             }
             catch (Exception ex)
@@ -952,10 +959,13 @@ namespace CCTV.ViewModels
                 {
                     LogMessage("CCTV 스트림 재개 시작");
                     
-                    // 현재 채널의 스트림이 중지되어 있으면 재시작
+                    // 현재 채널의 스트림이 없으면 재시작
                     if (!m_lRealHandles.ContainsKey(channelNumber) || m_lRealHandles[channelNumber] < 0)
                     {
-                        LogMessage($"채널 {channelNumber} 스트림 재시작 필요");
+                        LogMessage($"채널 {channelNumber} 스트림 재시작 실행");
+                        
+                        // 약간의 지연 후 스트림 재시작 (SDK 안정화)
+                        Thread.Sleep(200);
                         
                         // 기존 방식으로 스트림 재시작
                         StartRealPlay();
@@ -972,11 +982,13 @@ namespace CCTV.ViewModels
                 else
                 {
                     LogMessage("CCTV 스트림 재개 실패: 연결되지 않음");
+                    StatusMessage = "CCTV 재개 실패: 연결 끊김";
                 }
             }
             catch (Exception ex)
             {
                 LogError($"CCTV 스트림 재개 오류: {ex.Message}");
+                StatusMessage = $"CCTV 재개 오류: {ex.Message}";
             }
         }
     }

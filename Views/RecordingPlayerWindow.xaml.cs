@@ -65,6 +65,13 @@ namespace CCTV.Views
         
         private bool _disposed = false;
         
+        // 화면 전환 시 현재 재생 위치 저장용 필드 추가
+        private DateTime _savedPlaybackPosition = default;
+        
+        // 원본 검색 시간 범위 저장 (슬라이더 계산용)
+        private DateTime _originalStartTime = default;
+        private DateTime _originalEndTime = default;
+
         public RecordingPlayerWindow()
         {
             InitializeComponent();
@@ -947,9 +954,11 @@ namespace CCTV.Views
                 DateTime currentTime = new DateTime((int)osdTime.dwYear, (int)osdTime.dwMonth, (int)osdTime.dwDay,
                     (int)osdTime.dwHour, (int)osdTime.dwMinute, (int)osdTime.dwSecond);
 
-                // 총 재생 기간 계산 (캐시된 값 사용)
-                TimeSpan totalDuration = m_endTime - m_startTime;
-                TimeSpan currentPosition = currentTime - m_startTime;
+                // 총 재생 기간 계산 (캐시된 값 사용) - 원본 시간 범위 사용
+                TimeSpan totalDuration = _originalEndTime != default && _originalStartTime != default ? 
+                    (_originalEndTime - _originalStartTime) : (m_endTime - m_startTime);
+                DateTime baseStartTime = _originalStartTime != default ? _originalStartTime : m_startTime;
+                TimeSpan currentPosition = currentTime - baseStartTime;
 
                 // UI 업데이트 최적화: 시간 텍스트는 항상 업데이트하되, 변경이 있을 때만
                 string newTimeText = currentTime.ToString("HH:mm:ss");
@@ -1268,6 +1277,12 @@ namespace CCTV.Views
                 
                 LogError($"선택된 날짜: {selectedDate.ToShortDateString()}, 시작 시간: {startTime}, 종료 시간: {endTime}");
                 
+                // 새로운 검색 시작 - 원본 시간 범위와 저장된 위치 초기화
+                _originalStartTime = startTime;
+                _originalEndTime = endTime;
+                _savedPlaybackPosition = default;
+                LogError($"새로운 검색 시작 - 원본 시간 범위 초기화: {_originalStartTime} ~ {_originalEndTime}");
+                
                 m_startTime = startTime;
                 m_endTime = endTime;
 
@@ -1567,6 +1582,20 @@ namespace CCTV.Views
                 m_startTime = startTime;
                 m_endTime = endTime;
                 
+                // 원본 시간 범위 저장 (최초 검색 시에만 설정, 슬라이더 계산용)
+                if (!isResume && (_originalStartTime == default || _originalEndTime == default))
+                {
+                    _originalStartTime = startTime;
+                    _originalEndTime = endTime;
+                    LogError($"원본 시간 범위 저장: {_originalStartTime} ~ {_originalEndTime}");
+                }
+                else if (isResume)
+                {
+                    // 재개 모드에서는 원본 시간 범위는 그대로 유지하고, 
+                    // 전역 변수만 현재 재생 범위로 설정
+                    LogError($"재개 모드: 원본 범위({_originalStartTime}~{_originalEndTime}) 유지, 재생 범위({startTime}~{endTime}) 설정");
+                }
+                
                 // 상태 업데이트
                 isPlaying = true;
                 playbackSpeed = 1.0;
@@ -1574,6 +1603,9 @@ namespace CCTV.Views
                 // UI 업데이트
                 StatusText.Text = isResume ? "재생 위치 변경됨" : "녹화 영상 재생 중";
                 EndTimeText.Text = endTime.ToString("HH:mm:ss");
+                
+                // 재생 시작 시간 표시 개선: 실제 재생이 시작되는 시간을 표시
+                // (저장된 위치에서 재생할 때는 그 위치의 시간을 표시)
                 PlayTimeText.Text = startTime.ToString("HH:mm:ss");
 
                 // 버튼 상태 업데이트
@@ -1750,14 +1782,16 @@ namespace CCTV.Views
 
             try
             {
-                // 총 재생 시간(초)
-                TimeSpan totalDuration = m_endTime - m_startTime;
+                // 총 재생 시간(초) - 원본 시간 범위 사용
+                TimeSpan totalDuration = _originalEndTime != default && _originalStartTime != default ? 
+                    (_originalEndTime - _originalStartTime) : (m_endTime - m_startTime);
                 
                 // 새 위치(초)
                 double newPositionSeconds = (ProgressSlider.Value / 100) * totalDuration.TotalSeconds;
                 
-                // 시작 시간에 새 위치를 더해 현재 위치 계산
-                DateTime newPosition = m_startTime.AddSeconds(newPositionSeconds);
+                // 원본 시작 시간에 새 위치를 더해 현재 위치 계산
+                DateTime baseStartTime = _originalStartTime != default ? _originalStartTime : m_startTime;
+                DateTime newPosition = baseStartTime.AddSeconds(newPositionSeconds);
 
                 // 현재 시간 표시 업데이트
                 PlayTimeText.Text = newPosition.ToString("HH:mm:ss");
@@ -1804,15 +1838,17 @@ namespace CCTV.Views
                 lastSliderChangeTime = DateTime.Now.Ticks / 10000;
                 LogError($"마지막 슬라이더 변경 시간 업데이트: {lastSliderChangeTime}");
                 
-                // 총 재생 시간(초)
-                TimeSpan totalDuration = m_endTime - m_startTime;
+                // 총 재생 시간(초) - 원본 시간 범위 사용
+                TimeSpan totalDuration = _originalEndTime != default && _originalStartTime != default ? 
+                    (_originalEndTime - _originalStartTime) : (m_endTime - m_startTime);
                 
-                // 새 위치(초)
+                // 새 위치(초) - 원본 시작 시간 기준으로 계산
                 double newPositionSeconds = (ProgressSlider.Value / 100) * totalDuration.TotalSeconds;
                 
-                // 시작 시간에 새 위치를 더해 현재 위치 계산
-                DateTime newPosition = m_startTime.AddSeconds(newPositionSeconds);
-                LogError($"슬라이더 위치 변경 요청: {newPosition}");
+                // 원본 시작 시간에 새 위치를 더해 현재 위치 계산
+                DateTime baseStartTime = _originalStartTime != default ? _originalStartTime : m_startTime;
+                DateTime newPosition = baseStartTime.AddSeconds(newPositionSeconds);
+                LogError($"슬라이더 위치 변경 요청: {newPosition} (원본 범위: {baseStartTime} ~ {(_originalEndTime != default ? _originalEndTime : m_endTime)})");
 
                 // 현재 재생 상태 저장
                 bool wasPlaying = isPlaying;
@@ -1856,18 +1892,19 @@ namespace CCTV.Views
                     dwSecond = (uint)newPosition.Second
                 };
                 
-                // 종료 시간 구조체: 원래 종료 시간 그대로 사용
+                // 종료 시간 구조체: 원본 종료 시간 사용
+                DateTime endTime = _originalEndTime != default ? _originalEndTime : m_endTime;
                 Models.CCTV.NET_DVR_TIME struEndTime = new Models.CCTV.NET_DVR_TIME
                 {
-                    dwYear = (uint)m_endTime.Year,
-                    dwMonth = (uint)m_endTime.Month,
-                    dwDay = (uint)m_endTime.Day,
-                    dwHour = (uint)m_endTime.Hour,
-                    dwMinute = (uint)m_endTime.Minute,
-                    dwSecond = (uint)m_endTime.Second
+                    dwYear = (uint)endTime.Year,
+                    dwMonth = (uint)endTime.Month,
+                    dwDay = (uint)endTime.Day,
+                    dwHour = (uint)endTime.Hour,
+                    dwMinute = (uint)endTime.Minute,
+                    dwSecond = (uint)endTime.Second
                 };
                 
-                LogError($"재생 시도 - 새 위치: {newPosition}, 종료: {m_endTime}");
+                LogError($"재생 시도 - 새 위치: {newPosition}, 종료: {endTime}");
                 
                 // 4. 채널 번호 확인
                 int lChannel = channelNumber;
@@ -1882,18 +1919,18 @@ namespace CCTV.Views
                     LogError($"새 위치 재생 실패: 오류 코드 {errorCode} - {errorMsg}");
                     StatusText.Text = $"재생 위치 이동 실패: {errorMsg}";
                     
-                    // 실패 시 원래 범위 전체 재생으로 폴백
-                    LogError("실패 시 원래 범위 재생으로 폴백");
+                    // 실패 시 원본 시작점에서 재생으로 폴백
+                    LogError("실패 시 원본 시작점에서 재생으로 폴백");
                     
-                    // 원래 시작 시간으로 다시 시도
+                    // 원본 시작 시간으로 다시 시도
                     Models.CCTV.NET_DVR_TIME originalStartTime = new Models.CCTV.NET_DVR_TIME
                     {
-                        dwYear = (uint)m_startTime.Year,
-                        dwMonth = (uint)m_startTime.Month,
-                        dwDay = (uint)m_startTime.Day,
-                        dwHour = (uint)m_startTime.Hour,
-                        dwMinute = (uint)m_startTime.Minute,
-                        dwSecond = (uint)m_startTime.Second
+                        dwYear = (uint)baseStartTime.Year,
+                        dwMonth = (uint)baseStartTime.Month,
+                        dwDay = (uint)baseStartTime.Day,
+                        dwHour = (uint)baseStartTime.Hour,
+                        dwMinute = (uint)baseStartTime.Minute,
+                        dwSecond = (uint)baseStartTime.Second
                     };
                     
                     m_lPlayHandle = Models.CCTV.NET_DVR_PlayBackByTime(m_lUserID, lChannel, ref originalStartTime, ref struEndTime, hwnd);
@@ -1920,8 +1957,9 @@ namespace CCTV.Views
                     uint percentValue = (uint)ProgressSlider.Value;
                     Models.CCTV.NET_DVR_PlayBackControl(m_lPlayHandle, NET_DVR_SETPLAYPOS, percentValue, ref dwOutValue);
                     
-                    // 전역 변수 유지
-                    m_startTime = m_startTime; // 변경 필요 없음, 원래 값 유지
+                    // 전역 변수는 원본 범위로 설정 (슬라이더 계산 일관성 유지)
+                    m_startTime = baseStartTime;
+                    m_endTime = endTime;
                 }
                 else
                 {
@@ -1932,9 +1970,10 @@ namespace CCTV.Views
                     uint dwOutValue = 0;
                     Models.CCTV.NET_DVR_PlayBackControl(m_lPlayHandle, Models.CCTV.NET_DVR_PLAYSTART, 0, ref dwOutValue);
                     
-                    // 전역 변수 업데이트
-                    // 중요: 내부적으로는 새 위치에서 시작하지만, UI에 표시되는 시간 범위는 원래대로 유지함
-                    // m_startTime = 원래 값 유지 (변경하지 않음)
+                    // 전역 변수 업데이트 - 새 위치부터 원본 종료시간까지
+                    m_startTime = newPosition;
+                    m_endTime = endTime;
+                    LogError($"전역 변수 업데이트: m_startTime={m_startTime}, m_endTime={m_endTime}");
                 }
                 
                 // 6. 재생 상태에 따라 UI 업데이트
@@ -2548,7 +2587,7 @@ namespace CCTV.Views
             {
                 if (m_lPlayHandle >= 0 && !isPlaying)
                 {
-                    LogError("녹화재생 재개 시작 (화면 전환)");
+                    LogError("녹화재생 재개 시작 (화면 전환) - 일시정지 상태에서");
                     
                     uint dwOutValue = 0;
                     if (Models.CCTV.NET_DVR_PlayBackControl(m_lPlayHandle, NET_DVR_PLAYRESTART, 0, ref dwOutValue))
@@ -2568,6 +2607,9 @@ namespace CCTV.Views
                             StatusText.Text = "녹화 영상 재생 중";
                             PlayButton.IsEnabled = false;
                             PauseButton.IsEnabled = true;
+                            StopButton.IsEnabled = true;
+                            FastForwardButton.IsEnabled = true;
+                            SlowButton.IsEnabled = true;
                         }, System.Windows.Threading.DispatcherPriority.Normal);
                         
                         LogError("녹화재생 재개 완료 (화면 전환)");
@@ -2580,7 +2622,48 @@ namespace CCTV.Views
                 }
                 else if (m_lPlayHandle < 0)
                 {
-                    LogError("녹화재생 재개 건너뜀: 재생 핸들이 없음");
+                    LogError("녹화재생 재개 시작 (화면 전환) - 완전 중지 상태에서");
+                    
+                    // 완전히 중지된 상태에서 재개: 저장된 위치 또는 이전 시간대로 다시 재생
+                    if (m_startTime != default && m_endTime != default)
+                    {
+                        if (_savedPlaybackPosition != default)
+                        {
+                            // 저장된 재생 위치가 있으면 그 위치부터 재생
+                            LogError($"저장된 재생 위치에서 재시작: {_savedPlaybackPosition} ~ {m_endTime}");
+                            
+                            // 저장된 위치가 유효한 범위 내에 있는지 확인
+                            if (_savedPlaybackPosition >= m_startTime && _savedPlaybackPosition < m_endTime)
+                            {
+                                // 저장된 위치부터 원래 종료 시간까지 재생
+                                PlayRecording(_savedPlaybackPosition, m_endTime, true);
+                                
+                                // 저장된 위치 초기화 (한 번 사용 후 삭제)
+                                _savedPlaybackPosition = default;
+                            }
+                            else
+                            {
+                                LogError($"저장된 위치({_savedPlaybackPosition})가 유효 범위({m_startTime}~{m_endTime})를 벗어남, 원래 시작점에서 재생");
+                                PlayRecording(m_startTime, m_endTime, true);
+                                _savedPlaybackPosition = default;
+                            }
+                        }
+                        else
+                        {
+                            // 저장된 위치가 없으면 원래 시작점부터 재생
+                            LogError($"저장된 위치가 없어 원래 시작점에서 재시작: {m_startTime} ~ {m_endTime}");
+                            PlayRecording(m_startTime, m_endTime, true);
+                        }
+                    }
+                    else
+                    {
+                        LogError("녹화재생 재개 실패: 이전 재생 시간 정보가 없음");
+                        
+                        this.Dispatcher.BeginInvoke(() =>
+                        {
+                            StatusText.Text = "재생할 영상을 검색하세요";
+                        }, System.Windows.Threading.DispatcherPriority.Normal);
+                    }
                 }
                 else
                 {
@@ -2650,6 +2733,91 @@ namespace CCTV.Views
             {
                 System.Diagnostics.Debug.WriteLine($"RecordingPlayerWindow 리소스 정리 중 오류: {ex.Message}");
                 LogError($"RecordingPlayerWindow 리소스 정리 중 오류: {ex.Message}");
+            }
+        }
+
+        // 화면 전환 시 녹화재생 완전 중지 (리소스 해제용)
+        public void StopPlaybackForSwitch()
+        {
+            try
+            {
+                LogError("화면 전환을 위한 녹화재생 완전 중지 시작");
+                
+                // 현재 재생 위치 저장 (재생 중인 경우에만)
+                if (m_lPlayHandle >= 0 && isPlaying)
+                {
+                    try
+                    {
+                        Models.CCTV.NET_DVR_TIME osdTime = new Models.CCTV.NET_DVR_TIME();
+                        if (Models.CCTV.NET_DVR_GetPlayBackOsdTime(m_lPlayHandle, ref osdTime))
+                        {
+                            _savedPlaybackPosition = new DateTime((int)osdTime.dwYear, (int)osdTime.dwMonth, (int)osdTime.dwDay,
+                                (int)osdTime.dwHour, (int)osdTime.dwMinute, (int)osdTime.dwSecond);
+                            LogError($"현재 재생 위치 저장됨: {_savedPlaybackPosition}");
+                        }
+                        else
+                        {
+                            // OSD 시간을 가져올 수 없으면 슬라이더 위치 기반으로 계산
+                            if (m_startTime != default && m_endTime != default)
+                            {
+                                TimeSpan totalDuration = m_endTime - m_startTime;
+                                double currentPositionSeconds = (ProgressSlider.Value / 100) * totalDuration.TotalSeconds;
+                                _savedPlaybackPosition = m_startTime.AddSeconds(currentPositionSeconds);
+                                LogError($"슬라이더 기반 재생 위치 저장됨: {_savedPlaybackPosition}");
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        LogError($"재생 위치 저장 중 오류: {ex.Message}");
+                        // 오류 시 현재 슬라이더 위치 기반으로 저장
+                        if (m_startTime != default && m_endTime != default)
+                        {
+                            TimeSpan totalDuration = m_endTime - m_startTime;
+                            double currentPositionSeconds = (ProgressSlider.Value / 100) * totalDuration.TotalSeconds;
+                            _savedPlaybackPosition = m_startTime.AddSeconds(currentPositionSeconds);
+                            LogError($"오류 시 슬라이더 기반 위치 저장: {_savedPlaybackPosition}");
+                        }
+                    }
+                }
+                else
+                {
+                    LogError("재생 중이 아니므로 현재 위치 저장하지 않음");
+                }
+                
+                // 진행률 타이머 중지
+                if (progressTimer != null)
+                {
+                    progressTimer.Stop();
+                    isTimerActive = false;
+                }
+
+                // 재생 완전 중지
+                if (m_lPlayHandle >= 0)
+                {
+                    Models.CCTV.NET_DVR_StopPlayBack(m_lPlayHandle);
+                    m_lPlayHandle = -1;
+                    isPlaying = false;
+                }
+
+                // UI 상태 업데이트
+                this.Dispatcher.BeginInvoke(() =>
+                {
+                    StatusText.Text = "중지됨 (화면 전환)";
+                    PlayButton.IsEnabled = true;
+                    PauseButton.IsEnabled = false;
+                    StopButton.IsEnabled = false;
+                    FastForwardButton.IsEnabled = false;
+                    SlowButton.IsEnabled = false;
+                    
+                    // 진행률 초기화는 하지 않음 (복귀 시 위치 유지를 위해)
+                }, System.Windows.Threading.DispatcherPriority.Normal);
+                
+                LogError("화면 전환을 위한 녹화재생 완전 중지 완료");
+            }
+            catch (Exception ex)
+            {
+                LogError($"화면 전환용 녹화재생 중지 오류: {ex.Message}");
             }
         }
     }

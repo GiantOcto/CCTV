@@ -498,20 +498,20 @@ public partial class MainWindow : Window
         {
             System.Diagnostics.Debug.WriteLine("=== ShowCCTVView 시작 ===");
             
-            // 1. RecordingPlayerWindow 일시정지 및 숨김
+            // 1. RecordingPlayerWindow 완전 중지 및 숨김
             if (_recordingPlayerWindow != null)
             {
-                System.Diagnostics.Debug.WriteLine("RecordingPlayerWindow 일시정지 및 숨김 처리");
+                System.Diagnostics.Debug.WriteLine("RecordingPlayerWindow 완전 중지 및 숨김 처리");
                 
-                // 녹화재생 일시정지 (리소스 절약)
-                _recordingPlayerWindow.PausePlayback();
+                // 녹화재생 완전 중지 (리소스 완전 해제)
+                _recordingPlayerWindow.StopPlaybackForSwitch();
                 
                 // 화면 숨김
                 _recordingPlayerWindow.Hide();
                 _recordingPlayerWindow.HideVideoWindow();
                 _recordingPlayerWindow.Visibility = Visibility.Hidden;
                 
-                System.Diagnostics.Debug.WriteLine("RecordingPlayerWindow 일시정지 및 숨김 완료");
+                System.Diagnostics.Debug.WriteLine("RecordingPlayerWindow 완전 중지 및 숨김 완료");
             }
             
             // 2. CCTV 화면 표시 및 재개
@@ -522,11 +522,48 @@ public partial class MainWindow : Window
                 _cctvWindow.Show();
                 PositionFullScreenWindow(_cctvWindow);
                 
-                // CCTV 스트림 재개 (일시정지된 경우)
-                if (_cctvViewModel != null && _cctvViewModel.IsConnected)
+                // CCTV 스트림 재개 처리 개선
+                if (_cctvViewModel != null)
                 {
-                    _cctvViewModel.ResumeStream();
-                    System.Diagnostics.Debug.WriteLine("CCTV 스트림 재개됨");
+                    if (_cctvViewModel.IsConnected)
+                    {
+                        // 연결된 상태면 스트림 재개
+                        _cctvViewModel.ResumeStream();
+                        System.Diagnostics.Debug.WriteLine("CCTV 스트림 재개됨");
+                    }
+                    else
+                    {
+                        // 연결이 끊어진 상태면 재연결 시도
+                        System.Diagnostics.Debug.WriteLine("CCTV 연결이 끊어짐 - 재연결 시도");
+                        
+                        // 채널이 선택되어 있으면 재연결
+                        if (_selectedChannelButton != null)
+                        {
+                            // 비동기로 재연결 시도
+                            Task.Run(async () =>
+                            {
+                                try
+                                {
+                                    await _cctvViewModel.ConnectCommand.ExecuteAsync(null);
+                                    System.Diagnostics.Debug.WriteLine("CCTV 재연결 완료");
+                                }
+                                catch (Exception ex)
+                                {
+                                    System.Diagnostics.Debug.WriteLine($"CCTV 재연결 실패: {ex.Message}");
+                                    UpdateStatus($"CCTV 재연결 실패: {ex.Message}");
+                                }
+                            });
+                        }
+                        else
+                        {
+                            UpdateStatus("채널을 선택하여 CCTV에 연결하세요");
+                        }
+                    }
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine("CCTV ViewModel이 초기화되지 않음");
+                    UpdateStatus("CCTV 시스템이 초기화되지 않았습니다");
                 }
             }
             
