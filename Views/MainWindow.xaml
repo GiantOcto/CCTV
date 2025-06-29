@@ -11,9 +11,19 @@
         WindowState="Normal"
         Loaded="Window_Loaded"
         KeyDown="Window_KeyDown"
-        Background="Transparent"
         WindowStyle="None"
-        ResizeMode="CanResize">
+        ResizeMode="NoResize"
+        AllowsTransparency="True">
+
+    <Window.Background>
+        <LinearGradientBrush StartPoint="0.1,0.3" EndPoint="1,1">
+            <GradientStop Color="#FF00061C" Offset="0"/>
+            <GradientStop Color="#0f002e" Offset="0.3"/>
+            <GradientStop Color="#250040" Offset="0.5"/>
+            <GradientStop Color="#0f002e" Offset="0.7"/>
+            <GradientStop Color="#FF00061C" Offset="1"/>
+        </LinearGradientBrush>
+    </Window.Background>
 
     <Window.Resources>
         <!-- 버튼 스타일 -->
@@ -249,7 +259,7 @@
         </Style>
     </Window.Resources>
 
-    <Border Background="#FF2E3440" BorderBrush="#FF2E3440" BorderThickness="8">
+    <Border Background="Transparent" BorderBrush="Transparent" BorderThickness="0">
         <Grid MouseLeftButtonDown="Grid_MouseLeftButtonDown" 
               TouchDown="Grid_TouchDown" 
               ManipulationStarted="Grid_ManipulationStarted"
@@ -261,15 +271,33 @@
             </Grid.RowDefinitions>
 
             <!-- 상단 비디오 영역 (확장됨) -->
-            <Border Grid.Row="0" Background="#292F44" Margin="10">
+            <Border Grid.Row="0" Margin="10">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0.1,0.3" EndPoint="1,1">
+                        <GradientStop Color="#FF00061C" Offset="0"/>
+                        <GradientStop Color="#0f002e" Offset="0.3"/>
+                        <GradientStop Color="#250040" Offset="0.5"/>
+                        <GradientStop Color="#0f002e" Offset="0.7"/>
+                        <GradientStop Color="#FF00061C" Offset="1"/>
+                    </LinearGradientBrush>
+                </Border.Background>
             </Border>
 
             <!-- 하단 제어 영역 (PTZ + 기존 좌측 제어 통합) -->
-            <Border Grid.Row="1" Background="#292F44" BorderBrush="#FF4C566A" BorderThickness="0,1,0,0"
+            <Border Grid.Row="1" BorderBrush="#FF4C566A" BorderThickness="0,1,0,0"
                     MouseLeftButtonDown="Grid_MouseLeftButtonDown" 
                     TouchDown="Grid_TouchDown" 
                     ManipulationStarted="Grid_ManipulationStarted"
                     IsManipulationEnabled="True">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0.1,0.3" EndPoint="1,1">
+                        <GradientStop Color="#FF00061C" Offset="0"/>
+                        <GradientStop Color="#0f002e" Offset="0.3"/>
+                        <GradientStop Color="#250040" Offset="0.5"/>
+                        <GradientStop Color="#0f002e" Offset="0.7"/>
+                        <GradientStop Color="#FF00061C" Offset="1"/>
+                    </LinearGradientBrush>
+                </Border.Background>
                 <ScrollViewer x:Name="MainScrollViewer"
                               VerticalScrollBarVisibility="Hidden"
                               HorizontalScrollBarVisibility="Hidden"
@@ -403,10 +431,18 @@
 
             <!-- 하단 상태바 -->
             <Border Grid.Row="2" 
-                   Background="#FF2E3440" 
                    BorderBrush="#FF4C566A" 
                    BorderThickness="0,1,0,0"
                    Height="30">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0.1,0.3" EndPoint="1,1">
+                        <GradientStop Color="#FF00061C" Offset="0"/>
+                        <GradientStop Color="#0f002e" Offset="0.3"/>
+                        <GradientStop Color="#250040" Offset="0.5"/>
+                        <GradientStop Color="#0f002e" Offset="0.7"/>
+                        <GradientStop Color="#FF00061C" Offset="1"/>
+                    </LinearGradientBrush>
+                </Border.Background>
                 <TextBlock x:Name="StatusTextBlock" Text="CCTV 제어 시스템 준비됨" 
                            Foreground="White" 
                            VerticalAlignment="Center" Margin="10,0"/>

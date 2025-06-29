@@ -1110,8 +1110,8 @@ public partial class MainWindow : Window
     // 새로운 스크롤 이벤트 핸들러들
     private void MainScrollViewer_Loaded(object sender, RoutedEventArgs e)
     {
-        // ScrollViewer가 로드된 후 맨 아래로 스크롤
-        MainScrollViewer.ScrollToEnd();
+        // ScrollViewer가 로드된 후 맨 위로 스크롤
+        MainScrollViewer.ScrollToHome();
     }
     
     private void Content_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -1252,7 +1252,7 @@ public partial class MainWindow : Window
             }
             else
             {
-                // 우측으로 이동 및 작업표시줄 위 표시
+                // 우측으로 도킹
                 DockToRightSide();
             }
         }
@@ -1274,38 +1274,28 @@ public partial class MainWindow : Window
             _originalHeight = this.Height;
             _originalWindowState = this.WindowState;
 
-            // 실제 화면 정보 가져오기
-            double screenWidth = SystemParameters.PrimaryScreenWidth;
-            double screenHeight = SystemParameters.PrimaryScreenHeight;
-            var workArea = SystemParameters.WorkArea;
+            // 창을 모니터 우측에 붙이기
+            if (this.WindowState == WindowState.Maximized)
+            {
+                this.WindowState = WindowState.Normal;
+            }
             
-            System.Diagnostics.Debug.WriteLine($"실제 화면 크기: Width={screenWidth}, Height={screenHeight}");
-            System.Diagnostics.Debug.WriteLine($"현재 윈도우 크기: Width={this.Width}, Height={this.Height}");
-            
-            // 윈도우를 우측으로 이동
-            this.WindowState = WindowState.Normal;
-            
-            // 현재 윈도우 크기 유지 (640x1080)
-            double newWidth = this.Width; // 640 유지
-            double newHeight = this.Height; // 1080 유지
-            
-            // 화면 우측 끝에 정확히 맞추기
-            // 1920 - 640 = 1280
-            double newLeft = screenWidth - newWidth;
-            double newTop = workArea.Top;
-            
-            System.Diagnostics.Debug.WriteLine($"계산된 위치: Left={newLeft} (화면폭 {screenWidth} - 윈도우폭 {newWidth})");
-            System.Diagnostics.Debug.WriteLine($"새 윈도우 설정: Left={newLeft}, Top={newTop}, Width={newWidth}, Height={newHeight}");
-            
-            // 윈도우 위치 설정 (크기는 변경하지 않음)
-            this.Left = newLeft;
-            this.Top = newTop;
-            
-            // 항상 위에 표시
+            // 윈도우 표시줄 위로 올라가도록 설정
             this.Topmost = true;
             
+            // 화면 전체 크기 정보 가져오기
+            double screenWidth = SystemParameters.PrimaryScreenWidth;
+            
+            // 우측에 640x1080 크기로 창 붙이기
+            this.Width = 640;
+            this.Height = 1080;
+            this.Left = screenWidth - 640; // 화면 우측 끝에 붙임
+            this.Top = 0; // 화면 최상단부터 시작
+            
             _isDockedToRight = true;
-            UpdateStatus($"윈도우가 화면 우측 끝(X:{newLeft})으로 이동되었습니다. 더블클릭으로 복귀할 수 있습니다.");
+            
+            System.Diagnostics.Debug.WriteLine($"우측 도킹 완료: Left={this.Left}, Top={this.Top}, Width={this.Width}, Height={this.Height}");
+            UpdateStatus($"윈도우가 화면 우측 끝(640x1080)으로 완전히 붙게 이동되었습니다. 더블클릭으로 복귀할 수 있습니다.");
         }
         catch (Exception ex)
         {
