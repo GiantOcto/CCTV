@@ -12,7 +12,7 @@
         Loaded="Window_Loaded"
         KeyDown="Window_KeyDown"
         WindowStyle="None"
-        ResizeMode="NoResize"
+        ResizeMode="CanResize"
         AllowsTransparency="True">
 
     <Window.Background>
