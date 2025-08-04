@@ -35,14 +35,7 @@ public partial class MainWindow : Window
     private System.Windows.Threading.DispatcherTimer? _deactivationTimer;
 
     // 스크롤 관련 필드 추가
-    private bool _isScrolling = false;
-    private Point _lastPosition;
-    private Point _lastMousePosition;
-    private bool _isMouseDown = false;
-    private System.Windows.Threading.DispatcherTimer _inertiaTimer;
-    private double _scrollVelocity = 0;
-    private const double DECELERATION_RATE = 0.90; // 감속률 (값이 클수록 더 오래 스크롤)
-    private const double VELOCITY_THRESHOLD = 0.5; // 스크롤 중지 임계값
+
 
     // 윈도우 위치 상태 관련 필드 추가
     private bool _isDockedToRight = false;
@@ -65,20 +58,6 @@ public partial class MainWindow : Window
         // 윈도우 활성화/비활성화 이벤트 추가
         this.Activated += MainWindow_Activated;
         this.Deactivated += MainWindow_Deactivated;
-
-        // 스크롤 성능 향상을 위한 설정
-        RenderOptions.SetBitmapScalingMode(MainScrollViewer, BitmapScalingMode.LowQuality);
-        ScrollViewer.SetIsDeferredScrollingEnabled(MainScrollViewer, true);
-        
-        // 관성 스크롤 타이머 초기화
-        _inertiaTimer = new System.Windows.Threading.DispatcherTimer();
-        _inertiaTimer.Interval = TimeSpan.FromMilliseconds(16); // 약 60fps
-        _inertiaTimer.Tick += InertiaTimer_Tick;
-        
-        // 관성 스크롤링 활성화 (세로 모드에 맞게 설정)
-        MainScrollViewer.PanningMode = PanningMode.VerticalOnly;
-        MainScrollViewer.PanningDeceleration = 0.001; // 감속 값이 작을수록 더 긴 관성
-        MainScrollViewer.PanningRatio = 1.0; // 스크롤링 비율
     }
 
     private void InitializeChannelSelection()
@@ -636,8 +615,8 @@ public partial class MainWindow : Window
             System.Diagnostics.Debug.WriteLine($"WindowState: {this.WindowState}");
             
             // 상하 레이아웃에서 상단 영상 영역 전체를 사용
-            double controlPanelHeight = 250; // 하단 제어 패널 높이
-            double statusBarHeight = 30; // 상태바 높이
+            double controlPanelHeight = 400; // 하단 제어 패널 높이 (400px로 증가)
+            double statusBarHeight = 0; // 상태바 높이 (제거됨)
             double margin = 10; // 마진
             
             double windowX, windowY, windowWidth, windowHeight;
@@ -705,10 +684,8 @@ public partial class MainWindow : Window
     {
         try
         {
-            if (StatusTextBlock != null)
-            {
-                StatusTextBlock.Text = $"{DateTime.Now:HH:mm:ss} - {message}";
-            }
+            // 상태바가 제거되어 디버그 출력으로만 처리
+            System.Diagnostics.Debug.WriteLine($"{DateTime.Now:HH:mm:ss} - {message}");
         }
         catch (Exception ex)
         {
@@ -810,6 +787,9 @@ public partial class MainWindow : Window
             _cctvWindow.ShowActivated = false; // 활성화되지 않도록 설정
             _cctvWindow.Topmost = true;
             
+            // CCTV 창 크기 변경 방지 설정
+            _cctvWindow.ResizeMode = ResizeMode.NoResize;
+            
             // 윈도우 위치 설정
             PositionCCTVWindow();
             
@@ -833,6 +813,9 @@ public partial class MainWindow : Window
             _recordingPlayerWindow.ShowActivated = false; // 활성화되지 않도록 설정
             _recordingPlayerWindow.Topmost = true;
             
+            // 녹화영상 창 크기 변경 방지 설정
+            _recordingPlayerWindow.ResizeMode = ResizeMode.NoResize;
+            
             // 녹화영상 윈도우 위치 설정
             PositionRecordingPlayerWindow();
             
@@ -846,8 +829,8 @@ public partial class MainWindow : Window
         if (_recordingPlayerWindow != null)
         {
             // 상하 레이아웃에 맞춰 위치 계산
-            double controlPanelHeight = 250; // 하단 제어 패널 높이
-            double statusBarHeight = 30; // 상태바 높이
+            double controlPanelHeight = 400; // 하단 제어 패널 높이 (400px로 증가)
+            double statusBarHeight = 0; // 상태바 높이 (제거됨)
             double margin = 10; // 마진
             
             // 상단 영상 영역의 위치와 크기 계산 (전체 상단 영역 사용)
@@ -886,8 +869,8 @@ public partial class MainWindow : Window
         if (_cctvWindow != null)
         {
             // 상하 레이아웃: 상단 영상 영역에 CCTV 윈도우 고정
-            double controlPanelHeight = 250; // 하단 제어 패널 높이
-            double statusBarHeight = 30; // 상태바 높이
+            double controlPanelHeight = 400; // 하단 제어 패널 높이 (400px로 증가)
+            double statusBarHeight = 0; // 상태바 높이 (제거됨)
             double margin = 10; // 마진
             
             // 상단 영상 영역의 위치와 크기 계산
@@ -1057,188 +1040,7 @@ public partial class MainWindow : Window
         }
     }
 
-    // 관성 스크롤 타이머 이벤트
-    private void InertiaTimer_Tick(object? sender, EventArgs e)
-    {
-        // 스크롤 속도가 임계값보다 작으면 타이머 중지
-        if (Math.Abs(_scrollVelocity) < VELOCITY_THRESHOLD)
-        {
-            _inertiaTimer?.Stop();
-            return;
-        }
-        
-        // 감속 적용
-        _scrollVelocity *= DECELERATION_RATE;
-        
-        // 값이 너무 작으면 중지
-        if (Math.Abs(_scrollVelocity) < VELOCITY_THRESHOLD)
-        {
-            _inertiaTimer?.Stop();
-            return;
-        }
-        
-        // 부드러운 스크롤 애니메이션
-        double targetOffset = MainScrollViewer.VerticalOffset + _scrollVelocity;
-        AnimateScroll(targetOffset);
-    }
-    
-    private void AnimateScroll(double targetOffset)
-    {
-        // 범위 내로 조정
-        targetOffset = Math.Max(0, Math.Min(targetOffset, MainScrollViewer.ScrollableHeight));
-        
-        // 현재 오프셋에서 목표 오프셋으로 애니메이션
-        DoubleAnimation animation = new DoubleAnimation(
-            MainScrollViewer.VerticalOffset,
-            targetOffset,
-            TimeSpan.FromMilliseconds(100),
-            FillBehavior.Stop)
-        {
-            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
-        };
-        
-        animation.Completed += (s, e) => 
-        {
-            // 애니메이션이 끝난 후 명시적으로 스크롤 위치 설정
-            MainScrollViewer.ScrollToVerticalOffset(targetOffset);
-        };
-        
-        // 애니메이션 시작
-        MainScrollViewer.BeginAnimation(ScrollViewerOffsetProperty, animation);
-    }
 
-    // 새로운 스크롤 이벤트 핸들러들
-    private void MainScrollViewer_Loaded(object sender, RoutedEventArgs e)
-    {
-        // ScrollViewer가 로드된 후 맨 위로 스크롤
-        MainScrollViewer.ScrollToHome();
-    }
-    
-    private void Content_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-    {
-        // 관성 스크롤 중지
-        _inertiaTimer.Stop();
-        _scrollVelocity = 0;
-        
-        _lastMousePosition = e.GetPosition(MainScrollViewer);
-        _isMouseDown = true;
-        ((UIElement)sender).CaptureMouse();
-        e.Handled = true;
-    }
-    
-    private void Content_MouseMove(object sender, MouseEventArgs e)
-    {
-        if (_isMouseDown)
-        {
-            Point currentPosition = e.GetPosition(MainScrollViewer);
-            double deltaY = _lastMousePosition.Y - currentPosition.Y;
-            
-            // 스크롤 속도 계산 (현재 이동 거리 = 속도)
-            _scrollVelocity = deltaY * 0.7; // 속도 계수 조정
-            
-            // 애니메이션 없이 즉시 스크롤
-            MainScrollViewer.ScrollToVerticalOffset(MainScrollViewer.VerticalOffset + deltaY);
-            
-            _lastMousePosition = currentPosition;
-            e.Handled = true;
-        }
-    }
-    
-    private void Content_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
-    {
-        if (_isMouseDown)
-        {
-            _isMouseDown = false;
-            ((UIElement)sender).ReleaseMouseCapture();
-            
-            // 관성 스크롤 시작
-            if (Math.Abs(_scrollVelocity) > VELOCITY_THRESHOLD)
-            {
-                _inertiaTimer.Start();
-            }
-            
-            e.Handled = true;
-        }
-    }
-    
-    private void Content_TouchDown(object sender, TouchEventArgs e)
-    {
-        // 관성 스크롤 중지
-        _inertiaTimer.Stop();
-        _scrollVelocity = 0;
-        
-        _lastPosition = e.GetTouchPoint(MainScrollViewer).Position;
-        _isScrolling = true;
-        e.Handled = true;
-    }
-    
-    private void MainScrollViewer_TouchMove(object sender, TouchEventArgs e)
-    {
-        if (_isMouseDown)
-        {
-            Point currentPosition = e.GetTouchPoint(MainScrollViewer).Position;
-            double deltaY = _lastMousePosition.Y - currentPosition.Y;
-            
-            // 스크롤 속도 계산
-            _scrollVelocity = deltaY * 0.7;
-            
-            // 즉시 스크롤
-            MainScrollViewer.ScrollToVerticalOffset(MainScrollViewer.VerticalOffset + deltaY);
-            
-            _lastMousePosition = currentPosition;
-            e.Handled = true;
-        }
-    }
-    
-    private void MainScrollViewer_TouchUp(object sender, TouchEventArgs e)
-    {
-        _isMouseDown = false;
-        
-        // 관성 스크롤 시작
-        if (Math.Abs(_scrollVelocity) > VELOCITY_THRESHOLD)
-        {
-            _inertiaTimer.Start();
-        }
-        
-        e.Handled = true;
-    }
-    
-    private void MainScrollViewer_TouchLeave(object sender, TouchEventArgs e)
-    {
-        _isMouseDown = false;
-    }
-    
-    private void MainScrollViewer_ManipulationBoundaryFeedback(object sender, ManipulationBoundaryFeedbackEventArgs e)
-    {
-        // 경계에 도달했을 때 바운스 효과 방지
-        e.Handled = true;
-    }
-
-    // ScrollViewer의 VerticalOffset을 애니메이션하기 위한 첨부 속성
-    public static readonly DependencyProperty ScrollViewerOffsetProperty =
-        DependencyProperty.RegisterAttached(
-            "ScrollViewerOffset",
-            typeof(double),
-            typeof(MainWindow),
-            new PropertyMetadata(0.0, OnScrollViewerOffsetChanged));
-    
-    private static void OnScrollViewerOffsetChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-    {
-        if (d is ScrollViewer scrollViewer)
-        {
-            scrollViewer.ScrollToVerticalOffset((double)e.NewValue);
-        }
-    }
-    
-    public static void SetScrollViewerOffset(ScrollViewer element, double value)
-    {
-        element.SetValue(ScrollViewerOffsetProperty, value);
-    }
-    
-    public static double GetScrollViewerOffset(ScrollViewer element)
-    {
-        return (double)element.GetValue(ScrollViewerOffsetProperty);
-    }
 
     // 더블클릭 이벤트 핸들러
     private void HandleDoubleClick()
