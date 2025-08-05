@@ -199,7 +199,7 @@ public partial class MainWindow : Window
     private void UncheckAllChannelButtons()
     {
         // 모든 채널 버튼의 선택 상태 해제
-        var channelButtons = new[] { "33", "34", "35", "36" };
+        var channelButtons = new[] { "33", "34", "35", "36", "37", "38", "39", "40" };
         foreach (string channelStr in channelButtons)
         {
             var button = this.FindName($"Channel{channelStr}Button") as ToggleButton;

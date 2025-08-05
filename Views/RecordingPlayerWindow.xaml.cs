@@ -1054,10 +1054,10 @@ namespace CCTV.Views
                 }
 
                 // NVR 접속 정보
-                string ip = "192.168.100.4";
-                string username = "admin";
-                string password = "!yanry3734";
-                ushort port = 8000;
+               string ip = "192.168.0.13";
+               string username = "admin";
+               string password = "!yanry4880";
+               ushort port = 8000;
 
                 LogError($"NVR 연결 시도 - IP: {ip}, 포트: {port}, 사용자: {username}");
 

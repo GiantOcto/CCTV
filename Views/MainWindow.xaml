@@ -319,11 +319,15 @@
                                         <!-- 채널 선택 -->
                                         <StackPanel Margin="0,10,0,0" Height="147">
 
-                                            <UniformGrid Columns="2" Rows="2">
+                                            <UniformGrid Columns="4" Rows="2">
                                                 <ToggleButton Name="Channel33Button" Content="Ch.1" Style="{StaticResource ChannelButtonStyle}" Click="ChannelButton_Click" Tag="33" Height="60" Margin="5"/>
                                                 <ToggleButton Name="Channel34Button" Content="Ch.2" Style="{StaticResource ChannelButtonStyle}" Click="ChannelButton_Click" Tag="34" Height="60" Margin="5"/>
                                                 <ToggleButton Name="Channel35Button" Content="Ch.3" Style="{StaticResource ChannelButtonStyle}" Click="ChannelButton_Click" Tag="35" Height="60" Margin="5"/>
                                                 <ToggleButton Name="Channel36Button" Content="Ch.4" Style="{StaticResource ChannelButtonStyle}" Click="ChannelButton_Click" Tag="36" Height="60" Margin="5"/>
+                                                <ToggleButton Name="Channel37Button" Content="Ch.5" Style="{StaticResource ChannelButtonStyle}" Click="ChannelButton_Click" Tag="37" Height="60" Margin="5"/>
+                                                <ToggleButton Name="Channel38Button" Content="Ch.6" Style="{StaticResource ChannelButtonStyle}" Click="ChannelButton_Click" Tag="38" Height="60" Margin="5"/>
+                                                <ToggleButton Name="Channel39Button" Content="Ch.7" Style="{StaticResource ChannelButtonStyle}" Click="ChannelButton_Click" Tag="39" Height="60" Margin="5"/>
+                                                <ToggleButton Name="Channel40Button" Content="Ch.8" Style="{StaticResource ChannelButtonStyle}" Click="ChannelButton_Click" Tag="40" Height="60" Margin="5"/>
                                             </UniformGrid>
                                         </StackPanel>
                                     </StackPanel>
