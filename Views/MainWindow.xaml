@@ -352,8 +352,8 @@
                                     <!-- 하단: 화면 제어 -->
                                     <Border Grid.Row="1" BorderBrush="LightGray" BorderThickness="1" CornerRadius="3" Margin="0,5,0,0" Padding="5">
                                         <StackPanel>
-                                            <Button x:Name="ViewToggleButton" Content="🎬 녹화 재생" Style="{StaticResource ButtonStyle}" Click="ViewToggleButton_Click" Height="50" Background="#FF77CAD1" Margin="5" Width="200"/>
-                                            <Button Content="❌ 앱 종료" Style="{StaticResource ButtonStyle}" Click="ExitButton_Click" Height="40" Background="#FFBF616A" Margin="5" Width="200"/>
+                                            <Button x:Name="ViewToggleButton" Content="🎬 녹화 재생" Style="{StaticResource ButtonStyle}" Click="ViewToggleButton_Click" Height="50" Background="#FF77CAD1" Margin="0,15,0,10" Width="200"/>
+                                            <Button Content="❌ 앱 종료" Style="{StaticResource ButtonStyle}" Click="ExitButton_Click" Height="50" Background="#FFBF616A" Margin="5" Width="200"/>
                                         </StackPanel>
                                     </Border>
                                 </Grid>
