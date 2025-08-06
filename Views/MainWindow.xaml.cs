@@ -1123,4 +1123,18 @@ public partial class MainWindow : Window
             UpdateStatus($"원상복귀 오류: {ex.Message}");
         }
     }
+
+    protected override void OnActivated(EventArgs e)
+    {
+        // 포커스를 받았을 때 Topmost 설정
+        this.Topmost = true;
+        base.OnActivated(e);
+    }
+
+    protected override void OnDeactivated(EventArgs e)
+    {
+        // 포커스를 잃으면 Topmost 해제
+        this.Topmost = false;
+        base.OnDeactivated(e);
+    }
 }

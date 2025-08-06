@@ -140,14 +140,14 @@ namespace CCTV.Views
 
         protected override void OnActivated(EventArgs e)
         {
-            // 포커스를 받았을 때 Topmost 설정
+            // CCTV 창은 항상 최상위에 표시
             this.Topmost = true;
             base.OnActivated(e);
         }
 
         protected override void OnDeactivated(EventArgs e)
         {
-            // 포커스를 잃었을 때 Topmost 해제
+            // 포커스를 잃으면 Topmost 해제
             this.Topmost = false;
             base.OnDeactivated(e);
         }
@@ -264,7 +264,15 @@ namespace CCTV.Views
                 this.Left = windowX;
                 this.Top = windowY;
                 this.Width = windowWidth;
-                this.Height = windowHeight;
+                // MaxHeight가 설정되어 있으면 그 값을 초과하지 않도록 제한
+                if (this.MaxHeight > 0 && windowHeight > this.MaxHeight)
+                {
+                    this.Height = this.MaxHeight;
+                }
+                else
+                {
+                    this.Height = windowHeight;
+                }
                 
                 System.Diagnostics.Debug.WriteLine($"CCTVWindow 위치 설정: Left={windowX}, Top={windowY}, Width={windowWidth}, Height={windowHeight}");
             }
