@@ -264,7 +264,7 @@
             </Border>
 
             <!-- 하단 제어 영역 (PTZ + 기존 좌측 제어 통합) -->
-            <Border Grid.Row="1" BorderBrush="#FF4C566A" BorderThickness="0,1,0,0" MouseLeftButtonDown="Grid_MouseLeftButtonDown" TouchDown="Grid_TouchDown" ManipulationStarted="Grid_ManipulationStarted" IsManipulationEnabled="True">
+            <Border Grid.Row="1" BorderBrush="#FF4C566A" BorderThickness="0,1,0,0">
                 <Border.Background>
                     <LinearGradientBrush StartPoint="0.1,0.3" EndPoint="1,1">
                         <GradientStop Color="#FF00061C" Offset="0"/>
