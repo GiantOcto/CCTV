@@ -122,10 +122,10 @@ namespace CCTV.ViewModels
                 // 연결 작업을 백그라운드에서 실행
                 await Task.Run(() =>
                 {
-                    string ip = "192.168.0.13";
+                    string ip = "49.1.131.113";
                     string username = "admin";
                     string password = "!yanry4880";
-                    ushort port = 8000;
+                    ushort port = 9000;
 
                     // 로그인 구조체 설정
                     Models.CCTV.NET_DVR_DEVICEINFO_V30 deviceInfo = new Models.CCTV.NET_DVR_DEVICEINFO_V30();
