@@ -187,8 +187,8 @@ namespace CCTV.ViewModels
                 // 1단계: 모든 기존 스트림 완전히 중지
                 StopAllStreams();
                 
-                // 2단계: SDK 내부 정리를 위한 충분한 지연
-                Thread.Sleep(500);
+                // 2단계: SDK 내부 정리를 위한 최소 지연
+                Thread.Sleep(100);
                 
                 // 3단계: 윈도우 핸들 가져오기
                 IntPtr hwnd = GetVideoWindowHandle(videoControl);
@@ -198,14 +198,14 @@ namespace CCTV.ViewModels
                     return;
                 }
                 
-                // 4단계: 실시간 재생 구조체 설정
+                // 4단계: 실시간 재생 구조체 설정 (빠른 전환을 위해 최적화)
                 Models.CCTV.NET_DVR_PREVIEWINFO lpPreviewInfo = new Models.CCTV.NET_DVR_PREVIEWINFO
                 {
                     lChannel = channelNumber,  // 현재 채널 사용
                     dwStreamType = 0,          // 메인 스트림
                     dwLinkMode = 0,            // TCP 모드
                     hPlayWnd = hwnd,           // 비디오 윈도우 핸들
-                    bBlocked = true            // 블로킹 모드
+                    bBlocked = false           // 논블로킹 모드 (빠른 전환)
                 };
                 
                 // 5단계: 실시간 재생 시작
@@ -378,8 +378,8 @@ namespace CCTV.ViewModels
                 // 2단계: 채널 번호 변경
                 channelNumber = newChannelNumber;
                 
-                // 3단계: 충분한 지연 (SDK 내부 정리 시간)
-                Thread.Sleep(700);
+                // 3단계: 최소한의 지연 (SDK 내부 정리 시간)
+                Thread.Sleep(200);
                 
                 // 4단계: 새 채널로 스트림 시작
                 StartRealPlay();
@@ -875,7 +875,7 @@ namespace CCTV.ViewModels
         {
             try
             {
-                // 1차: Dictionary의 모든 핸들 중지
+                // 현재 활성 스트림만 중지 (빠른 채널 전환을 위해)
                 var handles = m_lRealHandles.ToList();
                 foreach (var handle in handles)
                 {
@@ -887,24 +887,7 @@ namespace CCTV.ViewModels
                 }
                 m_lRealHandles.Clear();
                 
-                // 2차: 강제로 모든 채널의 재생 중지 시도
-                for (int ch = 1; ch <= 64; ch++)
-                {
-                    try
-                    {
-                        Models.CCTV.NET_DVR_StopRealPlay(ch);
-                    }
-                    catch { /* 무시 */ }
-                }
-                
-                // 3차: 현재 채널에 대한 추가 정리
-                try
-                {
-                    Models.CCTV.NET_DVR_StopRealPlay(channelNumber);
-                }
-                catch { /* 무시 */ }
-                
-                LogMessage("모든 스트림 중지 완료");
+                LogMessage("활성 스트림 중지 완료");
             }
             catch (Exception ex)
             {
