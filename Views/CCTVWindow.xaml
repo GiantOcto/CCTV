@@ -6,7 +6,6 @@
         xmlns:local="clr-namespace:CCTV.Views"
         mc:Ignorable="d"
         Title="CCTV 모니터링" Height="600" MaxHeight="600" Width="800"
-        Topmost="True"
         ShowInTaskbar="True"
         WindowStyle="SingleBorderWindow"
         ResizeMode="CanResize"

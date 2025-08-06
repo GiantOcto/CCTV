@@ -785,7 +785,6 @@ public partial class MainWindow : Window
             _cctvWindow.WindowStyle = WindowStyle.None;
             _cctvWindow.ShowInTaskbar = false;
             _cctvWindow.ShowActivated = false; // 활성화되지 않도록 설정
-            _cctvWindow.Topmost = true;
             
             // CCTV 창 크기 변경 방지 설정
             _cctvWindow.ResizeMode = ResizeMode.NoResize;
@@ -811,7 +810,6 @@ public partial class MainWindow : Window
             _recordingPlayerWindow.WindowStyle = WindowStyle.None;
             _recordingPlayerWindow.ShowInTaskbar = false;
             _recordingPlayerWindow.ShowActivated = false; // 활성화되지 않도록 설정
-            _recordingPlayerWindow.Topmost = true;
             
             // 녹화영상 창 크기 변경 방지 설정
             _recordingPlayerWindow.ResizeMode = ResizeMode.NoResize;
@@ -1081,9 +1079,6 @@ public partial class MainWindow : Window
             {
                 this.WindowState = WindowState.Normal;
             }
-            
-            // 윈도우 표시줄 위로 올라가도록 설정
-            this.Topmost = true;
             
             // 화면 전체 크기 정보 가져오기
             double screenWidth = SystemParameters.PrimaryScreenWidth;

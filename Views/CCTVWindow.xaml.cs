@@ -138,19 +138,23 @@ namespace CCTV.Views
             }
         }
 
+        protected override void OnActivated(EventArgs e)
+        {
+            // 포커스를 받았을 때 Topmost 설정
+            this.Topmost = true;
+            base.OnActivated(e);
+        }
+
         protected override void OnDeactivated(EventArgs e)
         {
-            // 포커스를 잃었을 때는 아무것도 하지 않음 (창을 숨기지 않음)
-            // 창이 항상 위에 표시되도록 Topmost 재설정
-            this.Topmost = true;
+            // 포커스를 잃었을 때 Topmost 해제
+            this.Topmost = false;
             base.OnDeactivated(e);
         }
 
         protected override void OnLostFocus(RoutedEventArgs e)
         {
             // 포커스를 잃었을 때는 아무것도 하지 않음 (창을 숨기지 않음)
-            // 창이 항상 위에 표시되도록 Topmost 재설정
-            this.Topmost = true;
             base.OnLostFocus(e);
         }
 

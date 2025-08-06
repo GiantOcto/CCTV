@@ -6,7 +6,7 @@
     xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
     xmlns:local="clr-namespace:CCTV.Views"
     xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
-    xmlns:sys="clr-namespace:System;assembly=mscorlib" mc:Ignorable="d" Title="녹화 영상 재생" Height="600" MaxHeight="600" Width="900" WindowStartupLocation="CenterScreen" Background="#F0F0F0" TextElement.Foreground="Black" Topmost="True" ShowInTaskbar="False" ResizeMode="NoResize" WindowStyle="None" AllowsTransparency="True" Loaded="RecordingPlayerWindow_Loaded">
+    xmlns:sys="clr-namespace:System;assembly=mscorlib" mc:Ignorable="d" Title="녹화 영상 재생" Height="600" MaxHeight="600" Width="900" WindowStartupLocation="CenterScreen" Background="#F0F0F0" TextElement.Foreground="Black" ShowInTaskbar="False" ResizeMode="NoResize" WindowStyle="None" AllowsTransparency="True" Loaded="RecordingPlayerWindow_Loaded">
     <Window.Resources>
         <!-- 미래 날짜를 회색으로 표시하기 위한 스타일 -->
         <Style x:Key="DisabledCalendarDayButtonStyle" TargetType="{x:Type CalendarDayButton}">
