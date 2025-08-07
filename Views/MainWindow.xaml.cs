@@ -1113,8 +1113,8 @@ public partial class MainWindow : Window
             this.Width = _originalWidth;
             this.Height = _originalHeight;
             
-            // Topmost 해제
-            this.Topmost = false;
+            // Topmost 유지 (창이 항상 위에 표시되도록)
+            this.Topmost = true;
             
             _isDockedToRight = false;
             UpdateStatus("윈도우가 원래 위치로 복귀되었습니다.");
@@ -1133,8 +1133,8 @@ public partial class MainWindow : Window
 
     protected override void OnDeactivated(EventArgs e)
     {
-        // 포커스를 잃으면 Topmost 해제
-        this.Topmost = false;
+        // 포커스를 잃어도 Topmost 유지 (창이 항상 위에 표시되도록)
+        this.Topmost = true;
         base.OnDeactivated(e);
     }
 }
