@@ -1126,12 +1126,14 @@ namespace CCTV.Views
             {
                 ChannelComboBox.Items.Clear();
                 
-                // IP 채널 추가 (33번부터 시작)
+                // IP 채널 추가 (실제 번호는 33번부터, 표시는 1번부터)
                 for (int i = 0; i < deviceInfo.byIPChanNum; i++)
                 {
-                    int chanNum = 33 + i; // 33, 34, 35, 36, 37, 38 등
+                    int actualChanNum = 33 + i; // 실제 채널 번호: 33, 34, 35, 36, 37, 38 등
+                    int displayChanNum = 1 + i;  // 표시용 번호: 1, 2, 3, 4, 5, 6 등
                     ComboBoxItem item = new ComboBoxItem();
-                    item.Content = $"{chanNum}번 채널";
+                    item.Content = $"{displayChanNum}번 채널";
+                    item.Tag = actualChanNum; // 실제 채널 번호를 Tag에 저장
                     ChannelComboBox.Items.Add(item);
                 }
                 
@@ -1289,16 +1291,25 @@ namespace CCTV.Views
                 m_startTime = startTime;
                 m_endTime = endTime;
 
-                // 선택된 채널 번호 가져오기
+                // 선택된 채널 번호 가져오기 (Tag에서 실제 채널 번호 가져오기)
                 if (ChannelComboBox.SelectedItem is ComboBoxItem selectedItem)
                 {
-                    string content = selectedItem.Content.ToString();
-                    if (!string.IsNullOrEmpty(content) && content.Contains("번 채널"))
+                    // Tag에 저장된 실제 채널 번호 사용
+                    if (selectedItem.Tag != null && selectedItem.Tag is int actualChannel)
                     {
-                        string channelText = content.Replace("번 채널", "").Trim();
-                        if (int.TryParse(channelText, out int selectedChannel))
+                        channelNumber = actualChannel;
+                    }
+                    else
+                    {
+                        // Tag가 없는 경우 기존 방식으로 Content에서 파싱
+                        string content = selectedItem.Content.ToString();
+                        if (!string.IsNullOrEmpty(content) && content.Contains("번 채널"))
                         {
-                            channelNumber = selectedChannel;
+                            string channelText = content.Replace("번 채널", "").Trim();
+                            if (int.TryParse(channelText, out int selectedChannel))
+                            {
+                                channelNumber = selectedChannel;
+                            }
                         }
                     }
                 }
