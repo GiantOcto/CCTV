@@ -772,7 +772,6 @@ namespace CCTV.Views
                 _videoWindow.ResizeMode = ResizeMode.NoResize;
                 _videoWindow.ShowInTaskbar = false;
                 _videoWindow.ShowActivated = false; // 활성화되지 않도록 설정
-                _videoWindow.Topmost = true; // 항상 위에 표시
                 
                 // 비디오 컨트롤 참조 설정
                 videoControl = _videoWindow.VideoControl;
@@ -1190,19 +1189,23 @@ namespace CCTV.Views
             }
         }
 
+        protected override void OnActivated(EventArgs e)
+        {
+            // 포커스를 받았을 때 Topmost 설정
+            this.Topmost = true;
+             base.OnActivated(e);
+        }
+
         protected override void OnDeactivated(EventArgs e)
         {
-            // 포커스를 잃었을 때는 아무것도 하지 않음 (창을 숨기지 않음)
-            // 창이 항상 위에 표시되도록 Topmost 재설정
-            this.Topmost = true;
+            // 포커스를 잃었을 때 Topmost 해제
+            this.Topmost = false;   
             base.OnDeactivated(e);
         }
 
         protected override void OnLostFocus(RoutedEventArgs e)
         {
             // 포커스를 잃었을 때는 아무것도 하지 않음 (창을 숨기지 않음)
-            // 창이 항상 위에 표시되도록 Topmost 재설정
-            this.Topmost = true;
             base.OnLostFocus(e);
         }
         
