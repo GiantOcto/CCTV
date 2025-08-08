@@ -1200,8 +1200,8 @@ namespace CCTV.Views
 
         protected override void OnDeactivated(EventArgs e)
         {
-            // 포커스를 잃었을 때 Topmost 해제
-            this.Topmost = false;   
+            // 포커스를 잃어도 Topmost 유지
+            this.Topmost = true;   
             base.OnDeactivated(e);
         }
 
