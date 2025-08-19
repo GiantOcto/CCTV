@@ -252,15 +252,34 @@
 
             <!-- 상단 비디오 영역 (확장됨) -->
             <Border Grid.Row="0" Margin="10,10,10,10">
-                <Border.Background>
-                    <LinearGradientBrush StartPoint="0.1,0.3" EndPoint="1,1">
-                        <GradientStop Color="#FF00061C" Offset="0"/>
-                        <GradientStop Color="#0f002e" Offset="0.3"/>
-                        <GradientStop Color="#250040" Offset="0.5"/>
-                        <GradientStop Color="#0f002e" Offset="0.7"/>
-                        <GradientStop Color="#FF00061C" Offset="1"/>
-                    </LinearGradientBrush>
-                </Border.Background>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    
+                    <!-- CCTV 선택 드롭다운 -->
+                    <Border Grid.Row="0" BorderThickness="1" CornerRadius="5" Margin="0,0,0,10" Padding="10">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="현장명:" Foreground="White" FontSize="14" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                            <ComboBox x:Name="CCTVSelectionComboBox" Width="200" Height="30" FontSize="12" 
+                                      SelectionChanged="CCTVSelectionComboBox_SelectionChanged"/>
+                        </StackPanel>
+                    </Border>
+                    
+                    <!-- 비디오 영역 -->
+                    <Border Grid.Row="1">
+                        <Border.Background>
+                            <LinearGradientBrush StartPoint="0.1,0.3" EndPoint="1,1">
+                                <GradientStop Color="#FF00061C" Offset="0"/>
+                                <GradientStop Color="#0f002e" Offset="0.3"/>
+                                <GradientStop Color="#250040" Offset="0.5"/>
+                                <GradientStop Color="#0f002e" Offset="0.7"/>
+                                <GradientStop Color="#FF00061C" Offset="1"/>
+                            </LinearGradientBrush>
+                        </Border.Background>
+                    </Border>
+                </Grid>
             </Border>
 
             <!-- 하단 제어 영역 (PTZ + 기존 좌측 제어 통합) -->

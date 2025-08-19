@@ -71,6 +71,9 @@ namespace CCTV.Views
         // 원본 검색 시간 범위 저장 (슬라이더 계산용)
         private DateTime _originalStartTime = default;
         private DateTime _originalEndTime = default;
+        
+        // CCTV 설정 관련 필드 추가
+        private Models.CCTVSettings? _currentCCTVSettings;
 
         public RecordingPlayerWindow()
         {
@@ -1052,11 +1055,28 @@ namespace CCTV.Views
                     m_lUserID = -1;
                 }
 
-                // NVR 접속 정보
-               string ip = "49.1.131.113";
-               string username = "admin";
-               string password = "!yanry4880";
-               ushort port = 9000;
+                // NVR 접속 정보 - CCTV 설정 사용
+                string ip, username, password;
+                ushort port;
+                
+                if (_currentCCTVSettings != null)
+                {
+                    // 현재 CCTV 설정 사용
+                    ip = _currentCCTVSettings.IP;
+                    username = _currentCCTVSettings.Username;
+                    password = _currentCCTVSettings.Password;
+                    port = _currentCCTVSettings.Port;
+                    LogError($"CCTV 설정 사용: {_currentCCTVSettings.Name} - IP: {ip}, 포트: {port}");
+                }
+                else
+                {
+                    // 기본값 사용 (기존 설정)
+                    ip = "49.1.131.113";
+                    username = "admin";
+                    password = "!yanry4880";
+                    port = 9000;
+                    LogError("기본 CCTV 설정 사용");
+                }
 
                 LogError($"NVR 연결 시도 - IP: {ip}, 포트: {port}, 사용자: {username}");
 
@@ -1209,6 +1229,38 @@ namespace CCTV.Views
         {
             // 포커스를 잃었을 때는 아무것도 하지 않음 (창을 숨기지 않음)
             base.OnLostFocus(e);
+        }
+        
+        // CCTV 설정 업데이트 메서드
+        public void UpdateCCTVSettings(Models.CCTVSettings settings)
+        {
+            try
+            {
+                _currentCCTVSettings = settings;
+                LogError($"CCTV 설정 업데이트: {settings.Name} - IP: {settings.IP}, 포트: {settings.Port}");
+                
+                // 기존 연결이 있다면 해제
+                if (m_lUserID >= 0)
+                {
+                    LogError("기존 NVR 연결 해제");
+                    Models.CCTV.NET_DVR_Logout(m_lUserID);
+                    m_lUserID = -1;
+                }
+                
+                // 새로운 설정으로 재연결
+                ConnectToNVR();
+                
+                // UI 스레드에서 상태 업데이트
+                this.Dispatcher.Invoke(() =>
+                {
+                    StatusText.Text = $"CCTV 설정 변경됨: {settings.Name}";
+                    ResetStatusTextAfterDelay();
+                });
+            }
+            catch (Exception ex)
+            {
+                LogError($"CCTV 설정 업데이트 오류: {ex.Message}");
+            }
         }
         
         // Visibility 변경 이벤트 핸들러

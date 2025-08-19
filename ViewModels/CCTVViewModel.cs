@@ -32,6 +32,9 @@ namespace CCTV.ViewModels
         // 표시할 채널 번호 (기본값 설정)
         private int channelNumber = 33;
         
+        // CCTV 설정 정보
+        private CCTVSettings _cctvSettings;
+        
         // 비디오 이미지 컨트롤 참조
         private Image videoControl;
 
@@ -57,9 +60,19 @@ namespace CCTV.ViewModels
         public ICommand GoToPreset1Command { get; }
         public ICommand GoToPreset2Command { get; }
         
+        // CCTV 설정 업데이트 메서드
+        public void UpdateCCTVSettings(CCTVSettings settings)
+        {
+            _cctvSettings = settings;
+            StatusMessage = $"CCTV 설정이 업데이트되었습니다: {settings.Name}";
+        }
+        
         public CCTVViewModel(Image videoControl)
         {
             this.videoControl = videoControl;
+            
+            // 기본 CCTV 설정 (갑을 명가)
+            _cctvSettings = new CCTVSettings("갑을 명가", "49.1.131.113", "admin", "!yanry4880", 9000);
          
             InitSDK();
 
@@ -122,10 +135,11 @@ namespace CCTV.ViewModels
                 // 연결 작업을 백그라운드에서 실행
                 await Task.Run(() =>
                 {
-                    string ip = "49.1.131.113";
-                    string username = "admin";
-                    string password = "!yanry4880";
-                    ushort port = 9000;
+                    // 현재 CCTV 설정 사용
+                    string ip = _cctvSettings.IP;
+                    string username = _cctvSettings.Username;
+                    string password = _cctvSettings.Password;
+                    ushort port = _cctvSettings.Port;
 
                     // 로그인 구조체 설정
                     Models.CCTV.NET_DVR_DEVICEINFO_V30 deviceInfo = new Models.CCTV.NET_DVR_DEVICEINFO_V30();
@@ -315,7 +329,7 @@ namespace CCTV.ViewModels
         }
 
         [RelayCommand]
-        private void Disconnect()
+        public void Disconnect()
         {
             try
             {

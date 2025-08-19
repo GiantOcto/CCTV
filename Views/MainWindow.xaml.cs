@@ -12,6 +12,8 @@ using System.Windows.Shapes;
 using System.Windows.Media.Animation;
 using CCTV.Views;
 using CCTV.ViewModels;
+using CCTV.Models;
+using System.Collections.Generic;
 
 namespace CCTV;
 
@@ -23,6 +25,10 @@ public partial class MainWindow : Window
     private CCTVViewModel? _cctvViewModel;
     private int _currentChannel = 33;
     private ToggleButton? _selectedChannelButton;
+    
+    // CCTV 설정 목록
+    private List<CCTVSettings> _cctvSettingsList;
+    private CCTVSettings? _currentCCTVSettings;
     
     // CCTV 윈도우 관련 필드 추가
     private CCTVWindow? _cctvWindow;
@@ -52,6 +58,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        InitializeCCTVSettings();
         InitializeChannelSelection();
         this.Loaded += Window_Loaded;
         
@@ -60,10 +67,57 @@ public partial class MainWindow : Window
         this.Deactivated += MainWindow_Deactivated;
     }
 
+    private void InitializeCCTVSettings()
+    {
+        // CCTV 설정 목록 초기화
+        _cctvSettingsList = new List<CCTVSettings>
+        {
+            new CCTVSettings("속초 1호기", "175.206.165.220", "admin", "!yanry4880", 9000),
+            new CCTVSettings("속초 2,3호기", "222.113.92.40", "admin", "!yanry4880", 9001),
+            new CCTVSettings("갑을 명가", "49.1.131.113", "admin", "!yanry4880", 9000)
+        };
+        
+        // 드롭다운에 설정 목록 추가
+        CCTVSelectionComboBox.ItemsSource = _cctvSettingsList;
+        
+        // 기본값으로 "갑을 명가" 선택 (기존 설정)
+        _currentCCTVSettings = _cctvSettingsList[2];
+        CCTVSelectionComboBox.SelectedItem = _currentCCTVSettings;
+    }
+
     private void InitializeChannelSelection()
     {
         // 프로그램 시작 시 아무 채널도 선택하지 않음
         // 사용자가 채널 버튼을 클릭할 때만 연결됨
+    }
+    
+    private void CCTVSelectionComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (CCTVSelectionComboBox.SelectedItem is CCTVSettings selectedSettings)
+        {
+            _currentCCTVSettings = selectedSettings;
+            
+            // 기존 연결이 있다면 해제
+            if (_cctvViewModel != null && _cctvViewModel.IsConnected)
+            {
+                _cctvViewModel.Disconnect();
+            }
+            
+            // 상태 메시지 업데이트
+            UpdateStatus($"CCTV 설정이 변경되었습니다: {selectedSettings.Name}");
+            
+            // CCTVViewModel에 새로운 설정 전달
+            if (_cctvViewModel != null)
+            {
+                _cctvViewModel.UpdateCCTVSettings(selectedSettings);
+            }
+            
+            // 녹화영상 윈도우에도 CCTV 설정 전달
+            if (_recordingPlayerWindow != null)
+            {
+                _recordingPlayerWindow.UpdateCCTVSettings(selectedSettings);
+            }
+        }
     }
 
     private void Window_Loaded(object sender, RoutedEventArgs e)
@@ -71,7 +125,6 @@ public partial class MainWindow : Window
         try
         {
             CreateCCTVWindow(); // CCTV 윈도우를 먼저 생성
-            CreateRecordingPlayerWindow(); // 녹화영상 윈도우도 함께 생성
             
             // 메인 윈도우가 완전히 렌더링된 후 위치 재조정
             this.Dispatcher.BeginInvoke(new Action(() =>
@@ -81,6 +134,10 @@ public partial class MainWindow : Window
             }), System.Windows.Threading.DispatcherPriority.Loaded);
             
             InitializeCCTV(); // 그 다음 초기화 (연결은 하지 않음)
+            
+            // CCTV 초기화 완료 후 녹화영상 윈도우 생성 (설정 전달을 위해)
+            CreateRecordingPlayerWindow();
+            
             UpdateStatus("CCTV 제어 프로그램이 시작되었습니다. 채널 버튼을 클릭하여 연결하세요.");
         }
         catch (Exception ex)
@@ -101,6 +158,13 @@ public partial class MainWindow : Window
                 if (videoImage != null)
                 {
                     _cctvViewModel = new CCTVViewModel(videoImage);
+                    
+                    // 현재 CCTV 설정 전달
+                    if (_currentCCTVSettings != null)
+                    {
+                        _cctvViewModel.UpdateCCTVSettings(_currentCCTVSettings);
+                    }
+                    
                     UpdateStatus("CCTV 시스템이 초기화되었습니다.");
                 }
                 else
@@ -816,6 +880,12 @@ public partial class MainWindow : Window
             
             // 녹화영상 윈도우 위치 설정
             PositionRecordingPlayerWindow();
+            
+            // 초기 CCTV 설정 전달
+            if (_currentCCTVSettings != null)
+            {
+                _recordingPlayerWindow.UpdateCCTVSettings(_currentCCTVSettings);
+            }
             
             // 초기에는 숨김 - 화면 전환 버튼으로만 표시
             // _recordingPlayerWindow.Show(); <- 제거
