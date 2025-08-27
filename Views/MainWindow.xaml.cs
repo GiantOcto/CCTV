@@ -72,8 +72,8 @@ public partial class MainWindow : Window
         // CCTV 설정 목록 초기화
         _cctvSettingsList = new List<CCTVSettings>
         {
-            new CCTVSettings("속초 1호기", "175.206.165.220", "admin", "!yanry4880", 9000),
-            new CCTVSettings("속초 2,3호기", "222.113.92.40", "admin", "!yanry4880", 9001),
+            new CCTVSettings("속초 1호기", "epscctv01.iptime.org", "admin", "!yanry4880", 9000),
+            new CCTVSettings("속초 2,3호기", "epscctv02.iptime.org", "admin", "!yanry4880", 9001),
             new CCTVSettings("갑을 명가", "49.1.131.113", "admin", "!yanry4880", 9000)
         };
         
