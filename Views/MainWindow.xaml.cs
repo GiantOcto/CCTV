@@ -69,12 +69,12 @@ public partial class MainWindow : Window
 
     private void InitializeCCTVSettings()
     {
-        // CCTV 설정 목록 초기화
+        // CCTV 설정 목록 초기화 - 현장별로 다른 채널 범위 설정
         _cctvSettingsList = new List<CCTVSettings>
         {
-            new CCTVSettings("속초 1호기", "epscctv01.iptime.org", "admin", "!yanry4880", 9000),
-            new CCTVSettings("속초 2,3호기", "epscctv02.iptime.org", "admin", "!yanry4880", 9001),
-            new CCTVSettings("갑을 명가", "49.1.131.113", "admin", "!yanry4880", 9000)
+            new CCTVSettings("속초 1호기", "epscctv01.iptime.org", "admin", "!yanry4880", 9000, 33, 33, 37), // 채널 33-37 (5개)
+            new CCTVSettings("속초 2,3호기", "epscctv02.iptime.org", "admin", "!yanry4880", 9001, 34, 34, 41), // 채널 34-41 (8개)
+            new CCTVSettings("갑을 명가", "49.1.131.113", "admin", "!yanry4880", 9000, 33, 33, 40) // 채널 33-40 (8개)
         };
         
         // 드롭다운에 설정 목록 추가
@@ -87,8 +87,11 @@ public partial class MainWindow : Window
 
     private void InitializeChannelSelection()
     {
-        // 프로그램 시작 시 아무 채널도 선택하지 않음
-        // 사용자가 채널 버튼을 클릭할 때만 연결됨
+        // 프로그램 시작 시 기본 현장의 채널 범위에 맞게 채널 버튼들 설정
+        if (_currentCCTVSettings != null)
+        {
+            UpdateChannelButtonsForSite(_currentCCTVSettings);
+        }
     }
     
     private void CCTVSelectionComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -103,8 +106,11 @@ public partial class MainWindow : Window
                 _cctvViewModel.Disconnect();
             }
             
+            // 현장 변경 시 채널 버튼들 업데이트
+            UpdateChannelButtonsForSite(selectedSettings);
+            
             // 상태 메시지 업데이트
-            UpdateStatus($"CCTV 설정이 변경되었습니다: {selectedSettings.Name}");
+            UpdateStatus($"CCTV 설정이 변경되었습니다: {selectedSettings.Name} (채널 {selectedSettings.MinChannel}-{selectedSettings.MaxChannel})");
             
             // CCTVViewModel에 새로운 설정 전달
             if (_cctvViewModel != null)
@@ -116,6 +122,51 @@ public partial class MainWindow : Window
             if (_recordingPlayerWindow != null)
             {
                 _recordingPlayerWindow.UpdateCCTVSettings(selectedSettings);
+            }
+        }
+    }
+    
+    // 현장별 채널 버튼 업데이트
+    private void UpdateChannelButtonsForSite(CCTVSettings settings)
+    {
+        try
+        {
+            // 기존 채널 버튼들 숨김
+            HideAllChannelButtons();
+            
+            // 새로운 채널 범위에 맞는 버튼들만 표시
+            for (int channel = settings.MinChannel; channel <= settings.MaxChannel; channel++)
+            {
+                var button = this.FindName($"Channel{channel}Button") as ToggleButton;
+                if (button != null)
+                {
+                    button.Visibility = Visibility.Visible;
+                    button.Tag = channel.ToString();
+                }
+            }
+            
+            // 선택된 채널 버튼 초기화
+            _selectedChannelButton = null;
+            UncheckAllChannelButtons();
+            
+            UpdateStatus($"채널 범위가 {settings.MinChannel}-{settings.MaxChannel}으로 업데이트되었습니다.");
+        }
+        catch (Exception ex)
+        {
+            UpdateStatus($"채널 버튼 업데이트 오류: {ex.Message}");
+        }
+    }
+    
+    // 모든 채널 버튼 숨김
+    private void HideAllChannelButtons()
+    {
+        // 가능한 모든 채널 번호에 대해 버튼 숨김
+        for (int channel = 33; channel <= 50; channel++)
+        {
+            var button = this.FindName($"Channel{channel}Button") as ToggleButton;
+            if (button != null)
+            {
+                button.Visibility = Visibility.Collapsed;
             }
         }
     }
@@ -262,14 +313,16 @@ public partial class MainWindow : Window
 
     private void UncheckAllChannelButtons()
     {
-        // 모든 채널 버튼의 선택 상태 해제
-        var channelButtons = new[] { "33", "34", "35", "36", "37", "38", "39", "40" };
-        foreach (string channelStr in channelButtons)
+        // 현재 선택된 현장의 채널 범위에 해당하는 버튼들만 처리
+        if (_currentCCTVSettings != null)
         {
-            var button = this.FindName($"Channel{channelStr}Button") as ToggleButton;
-            if (button != null)
+            for (int channel = _currentCCTVSettings.MinChannel; channel <= _currentCCTVSettings.MaxChannel; channel++)
             {
-                button.IsChecked = false;
+                var button = this.FindName($"Channel{channel}Button") as ToggleButton;
+                if (button != null)
+                {
+                    button.IsChecked = false;
+                }
             }
         }
     }

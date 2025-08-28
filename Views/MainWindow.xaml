@@ -376,6 +376,7 @@
                                                 <ToggleButton Name="Channel38Button" Content="Ch.6" Style="{StaticResource ChannelButtonStyle}" Click="ChannelButton_Click" Tag="38" Height="60" Margin="5"/>
                                                 <ToggleButton Name="Channel39Button" Content="Ch.7" Style="{StaticResource ChannelButtonStyle}" Click="ChannelButton_Click" Tag="39" Height="60" Margin="5"/>
                                                 <ToggleButton Name="Channel40Button" Content="Ch.8" Style="{StaticResource ChannelButtonStyle}" Click="ChannelButton_Click" Tag="40" Height="60" Margin="5"/>
+                                                <ToggleButton Name="Channel41Button" Content="Ch.9" Style="{StaticResource ChannelButtonStyle}" Click="ChannelButton_Click" Tag="41" Height="60" Margin="5"/>
                                             </UniformGrid>
                                         </StackPanel>
                                     </StackPanel>
