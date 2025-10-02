@@ -74,7 +74,7 @@ public partial class MainWindow : Window
         {
             new CCTVSettings("속초 1호기", "epscctv01.iptime.org", "admin", "!yanry4880", 9000, 33, 33, 37), // 채널 33-37 (5개)
             new CCTVSettings("속초 2,3호기", "epscctv02.iptime.org", "admin", "!yanry4880", 9001, 34, 34, 41), // 채널 34-41 (8개)
-            new CCTVSettings("갑을 명가", "49.1.131.113", "admin", "!yanry4880", 9000, 33, 33, 40) // 채널 33-40 (8개)
+            new CCTVSettings("갑을 명가", "epscctv03.iptime.org", "admin", "!yanry4880", 9000, 33, 33, 40) // 채널 33-40 (8개)
         };
         
         // 드롭다운에 설정 목록 추가
